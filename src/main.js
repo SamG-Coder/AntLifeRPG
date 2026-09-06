@@ -148,6 +148,13 @@ const presentation = new Presentation(
 const itemMeshes = new Map();
 const soilGeo = new T.IcosahedronGeometry(0.27, 1);
 function syncItems() {
+  const liveIds = new Set(state.items.map((item) => item.id));
+  for (const [id, mesh] of itemMeshes) {
+    if (!liveIds.has(id)) {
+      scene.remove(mesh);
+      itemMeshes.delete(id);
+    }
+  }
   for (const item of state.items) {
     let m = itemMeshes.get(item.id);
     if (!m) {
@@ -320,6 +327,7 @@ function rest() {
     return;
   }
   state.player.energy = 100;
+  const arrivalsBeforeRest = state.foodSupply?.arrivals ?? 0;
   for (let i = 0; i < 150; i++)
     tick(state, 1, {
       canWalk: walkable,
@@ -327,7 +335,12 @@ function rest() {
         clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });
   state.player.hunger = Math.max(0, state.player.hunger - 8);
-  toast("Two quiet hours beneath the leaf. The colony carries on.");
+  const arrivals = (state.foodSupply?.arrivals ?? 0) - arrivalsBeforeRest;
+  toast(
+    arrivals > 0
+      ? `Two quiet hours beneath the leaf. ${arrivals} fresh seeds arrived in the root garden while you rested.`
+      : "Two quiet hours beneath the leaf. The colony carries on.",
+  );
 }
 function journal() {
   if ($("journal").open) {
@@ -339,6 +352,9 @@ function journal() {
   const reserve = document.createElement("p");
   reserve.textContent = `Colony food: ${state.colony.food} portions · ${state.npcs.length} familiar workers`;
   roster.append(reserve);
+  const supply = document.createElement("p");
+  supply.textContent = `A caretaker scatters seeds in the root garden each morning at 06:00, up to 12 uncollected parcels. ${state.foodSupply?.arrivals ?? 0} seeds have arrived since this routine began.`;
+  roster.append(supply);
   const selfCare = document.createElement("p");
   const cleanliness = state.player.cleanliness ?? 78;
   selfCare.textContent = `Your antennae: ${cleanliness >= 90 ? "clean" : cleanliness >= 60 ? "dusty" : "coated in soil"} · ${state.player.groomingBouts ?? 0} grooming breaks completed. Press L on the ground to groom.`;
@@ -591,6 +607,7 @@ renderer.setAnimationLoop(() => {
   elapsed += dt;
   if (started && !$("journal").open) {
     const nurseryWasCleared = !!state.nurseryCleared;
+    const previousArrivals = state.foodSupply?.arrivals ?? 0;
     const groomingBouts = state.player.groomingBouts ?? 0;
     tick(state, dt, {
       canWalk: walkable,
@@ -599,6 +616,8 @@ renderer.setAnimationLoop(() => {
     });
     if (!nurseryWasCleared && state.nurseryCleared)
       toast("The nursery floor is clear. The colony has room to grow.");
+    if ((state.foodSupply?.arrivals ?? 0) > previousArrivals)
+      toast("Fresh seeds in the root garden. The morning gathering can begin.");
     if ((state.player.groomingBouts ?? 0) > groomingBouts)
       toast("Antennae clean. Ready for the next part of your day.");
     separateWorkersFromPlayer(state.npcs, state.player, dt, walkable);

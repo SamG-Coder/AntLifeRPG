@@ -4,6 +4,7 @@ import { advanceGrooming, validGrooming } from "./grooming.js";
 import { validWorkerBonds } from "./colony-social.js";
 import { advanceSoilStability, validSoilMotion } from "./soil-stability.js";
 import { recordNurseryCompletion, validNurseryCompletion } from "./duties.js";
+import { advanceFoodSupply, validFoodSupply } from "./food-supply.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -43,6 +44,7 @@ export function createState() {
   return {
     version: 1,
     day: 1,
+    foodSupply: { lastDay: 1, arrivals: 0, archived: 0 },
     time: 7 * 60,
     player: {
       x: 0,
@@ -89,6 +91,7 @@ export function tick(state, dt, { canMeet, canWalk } = {}) {
     state.time -= 1440;
   }
   const p = state.player;
+  advanceFoodSupply(state);
   p.hunger = Math.max(0, p.hunger - dt * 0.024);
   advanceGrooming(p, dt);
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
@@ -202,6 +205,7 @@ export function validateState(state) {
     ) &&
     validSoilMotion(state) &&
     validNurseryCompletion(state) &&
+    validFoodSupply(state) &&
     new Set(state.items.map((i) => i.id)).size === state.items.length &&
     Number.isInteger(state.nextItem) &&
     state.items.every((i) => i.id < state.nextItem) &&

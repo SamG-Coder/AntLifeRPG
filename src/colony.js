@@ -5,6 +5,7 @@ import { startGrooming, advanceGrooming } from "./grooming.js";
 import { updateWorkerEncounters } from "./colony-social.js";
 import { nurseryWaitingPlace, reserveExcavationCell } from "./work-layout.js";
 import { workerStep } from "./worker-steering.js";
+import { reservedSeeds } from "./food-supply.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -52,7 +53,8 @@ export function hasWorkerJob(state, worker) {
       item.id !== state.player.carrying,
   );
   return worker.role === "forager"
-    ? available.filter((item) => item.kind === "seed").length > 3
+    ? available.filter((item) => item.kind === "seed").length >
+        reservedSeeds(state)
     : available.some((item) => item.kind === "soil") || hasDigWork(state);
 }
 
@@ -207,7 +209,7 @@ export function updateColony(
           i.owner == null &&
           i.id !== state.player.carrying,
       );
-      if (available.length <= 3) {
+      if (available.length <= reservedSeeds(state)) {
         restAwayFromWork(n);
         continue;
       }
