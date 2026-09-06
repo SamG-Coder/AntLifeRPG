@@ -5,7 +5,7 @@ import { loadAnt, Ant } from "./ant.js";
 import { buildWorld, height, walkable } from "./world.js";
 import { CameraRig } from "./camera.js";
 import { AudioSystem } from "./audio.js";
-import { load, save } from "./save.js";
+import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
 import { AntSenses } from "./senses.js";
 import { Presentation } from "./presentation.js";
@@ -32,6 +32,7 @@ addEventListener("error", (event) => {
 const state = await load();
 let route = [];
 let started = false,
+  saveFailed = false,
   elapsed = 0,
   lastSave = 0,
   lastHud = 0,
@@ -388,7 +389,7 @@ $("enter").onclick = () => {
   started = true;
   $("enter").style.display = "none";
   audio.start();
-  toast("You are Worker 041. The day is yours.");
+  toast(loadNotice || "You are Worker 041. The day is yours.");
 };
 addEventListener("keydown", (e) => {
   if (
@@ -431,8 +432,10 @@ async function persist() {
   if (!started) return;
   try {
     await save(state);
+    saveFailed = false;
     lastSave = elapsed;
   } catch (error) {
+    saveFailed = true;
     console.warn(error);
     toast(
       "Saving is unavailable. Keep this tab open to preserve this session.",
@@ -593,7 +596,7 @@ renderer.setAnimationLoop(() => {
   frameTime += rawDt;
   if (frameTime >= 2) {
     $("status").textContent =
-      `${renderer.backend.isWebGPUBackend ? "WEBGPU" : "WEBGL 2"} · ${Math.round(frameCount / frameTime)} FPS · 24 colony workers · ${lastSave ? "colony saved" : "autosave ready"}`;
+      `${renderer.backend.isWebGPUBackend ? "WEBGPU" : "WEBGL 2"} · ${Math.round(frameCount / frameTime)} FPS · 24 colony workers · ${saveFailed ? "saving unavailable" : lastSave ? "colony saved" : "autosave ready"}`;
     $("status").dataset.metrics = JSON.stringify({
       fps: frameCount / frameTime,
       drawCalls: renderer.info.render.drawCalls,

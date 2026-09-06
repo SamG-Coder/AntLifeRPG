@@ -155,8 +155,35 @@ export function validateState(state) {
     state?.version === 1 &&
     Array.isArray(state.npcs) &&
     state.npcs.length === 24 &&
+    new Set(state.npcs.map((n) => n?.id)).size === 24 &&
+    state.npcs.every(
+      (n) =>
+        n &&
+        Number.isInteger(n.id) &&
+        typeof n.name === "string" &&
+        [n.x, n.z, n.energy, n.trust].every(Number.isFinite) &&
+        Array.isArray(n.memories) &&
+        n.memories.every((m) => m && typeof m.key === "string") &&
+        (!n.path ||
+          (Array.isArray(n.path) &&
+            n.path.every((p) => p && [p.x, p.z].every(Number.isFinite)))),
+    ) &&
     Array.isArray(state.removed) &&
     Array.isArray(state.items) &&
+    state.items.every(
+      (i) =>
+        i &&
+        Number.isInteger(i.id) &&
+        [i.x, i.z].every(Number.isFinite) &&
+        ["soil", "seed"].includes(i.kind),
+    ) &&
+    new Set(state.items.map((i) => i.id)).size === state.items.length &&
+    Number.isInteger(state.nextItem) &&
+    state.items.every((i) => i.id < state.nextItem) &&
+    Number.isInteger(state.day) &&
+    state.day > 0 &&
+    state.settings &&
+    typeof state.settings === "object" &&
     Number.isFinite(state.player?.x) &&
     Number.isFinite(state.player?.z) &&
     Number.isFinite(state.time)
