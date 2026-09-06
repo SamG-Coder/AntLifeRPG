@@ -96,7 +96,7 @@ test("work, hunger and obstruction interrupt shared grooming without completion 
 test("the colony scheduler starts shared grooming at adjacent beds and resumes for a loose load", () => {
   const state = createState();
   for (let z = 0; z < 3; z++)
-    for (let y = 0; y < 2; y++)
+    for (let y = 0; y < 5; y++)
       for (let x = 0; x < 7; x++) state.removed.push(`${x}:${y}:${z}`);
   for (const n of state.npcs) {
     const bed = restingPlace(n.id);

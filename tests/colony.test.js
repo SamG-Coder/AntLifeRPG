@@ -4,7 +4,7 @@ import { createState, tick, pickup } from "../src/simulation.js";
 test("exhausted crews clear the nursery and resume for newly loosened soil", () => {
   const s = createState();
   for (let iz = 0; iz < 3; iz++)
-    for (let iy = 0; iy < 2; iy++)
+    for (let iy = 0; iy < 5; iy++)
       for (let ix = 0; ix < 7; ix++) s.removed.push(`${ix}:${iy}:${iz}`);
   for (const n of s.npcs) {
     n.x = -14;

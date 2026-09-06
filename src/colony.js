@@ -204,6 +204,7 @@ export function updateColony(
       .filter(
         (i) =>
           i.kind === "soil" &&
+          !(i.fallHeight > 0) &&
           !i.deposited &&
           i.owner == null &&
           i.id !== state.player.carrying,

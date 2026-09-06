@@ -159,7 +159,10 @@ function syncItems() {
     m.visible = item.id !== state.player.carrying && item.owner == null;
     m.position.set(
       item.x,
-      height(item.x, item.z) + 0.2 + (item.deposited ? 0.08 : 0),
+      height(item.x, item.z) +
+        0.2 +
+        (item.fallHeight ?? 0) +
+        (item.deposited ? 0.08 : 0),
       item.z,
     );
   }
@@ -195,6 +198,7 @@ function nearby() {
     .filter(
       (i) =>
         !i.deposited &&
+        !(i.fallHeight > 0) &&
         i.owner == null &&
         i.id !== p.carrying &&
         distance(p, i) < 1.8,
@@ -729,6 +733,7 @@ renderer.setAnimationLoop(() => {
     );
   }
   rig.update(state.player, dt, player.root.position.y);
+  if (state.items.some((item) => item.fallHeight > 0)) syncItems();
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
   updateDaylight(scene, sun, ambient, state.time);
   if (elapsed - lastHud > 0.2) {
@@ -783,6 +788,8 @@ renderer.setAnimationLoop(() => {
         ? null
         : player.root.position.y - height(state.player.x, state.player.z),
       removed: state.removed.length,
+      fallingSoil: state.items.filter((item) => item.fallHeight > 0).length,
+      soilFalls: state.soilFalls ?? 0,
       items: state.items.length,
       carrying: state.player.carrying,
       colony: state.colony,

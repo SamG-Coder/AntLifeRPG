@@ -25,6 +25,8 @@ The current prototype is playable at **https://samg-coder.github.io/AntLifeRPG/*
 
 There are 24 named workers, a home, food store, excavation face, spoil bed and surface garden. Soil removal changes actual mesh geometry and produces persistent movable items. Workers now share the same item and excavation state as the player. Initial relationships record greetings and shared work.
 
+Undermined nursery soil can break loose and fall into collectable loads. A parcel retains support from material immediately below or an adjacent supporting column; removing that support can trigger a cascade. Falling loads cannot be picked up until they land, and their motion is saved. This initial loose-soil rule does not yet model cohesive earth, clump collisions or settled piles.
+
 Nearby workers occasionally pause to exchange scents when the soil between them is clear. Completed encounters build persistent familiarity between those workers, shown in Colony lives, and give familiar nearby nestmates a modest preference in future partner choices. Needs and deliveries remain part of their ongoing routines.
 
 Idle familiar nestmates can groom their own antennae beside each other for eight seconds. Both become cleaner, and completed shared breaks appear in Colony lives. Cargo, urgent needs, obstructed contact and renewed jobs prevent or interrupt the activity. This is shared self-grooming, not mutual cleaning of another ant.

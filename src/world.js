@@ -4,6 +4,7 @@ import { sites } from "./simulation.js";
 import { implicitMesh } from "./terrain.js";
 import { cameraEllipsoid, cameraCapsule } from "./camera-props.js";
 import { ellipsoidTop } from "./prop-support.js";
+import { excavationDensity } from "./excavation-field.js";
 import { leafTexture } from "./foliage.js";
 import { restingPlace } from "./colony-layout.js";
 import {
@@ -560,27 +561,7 @@ export function buildWorld(scene, state) {
       }
   let excavationMesh, excavationField;
   function rebuildExcavation() {
-    const holes = state.removed.map((id) => {
-      const [ix, iy, iz] = id.split(":").map(Number);
-      return [-16.3 + ix * 0.67, iy * 0.58 + 0.2, -28.5 - iz * 0.6];
-    });
-    const density = (x, y, z) => {
-      let value = Math.min(
-        x + 16.8,
-        -11.8 - x,
-        y + 0.1,
-        3.1 - y,
-        z + 30.2,
-        -28.12 - z,
-      );
-      value += Math.sin(x * 8 + y * 5) * Math.sin(z * 9 - y * 3) * 0.065;
-      for (const h of holes)
-        value = Math.min(
-          value,
-          Math.hypot(x - h[0], y - h[1], z - h[2]) - 0.56,
-        );
-      return value;
-    };
+    const density = excavationDensity(state.removed);
     excavationField = density;
     const geometry = implicitMesh(
       density,

@@ -25,7 +25,7 @@ test("all resting places have body clearance and connected walkable routes", () 
 test("saved idle crews leave the store for their individual beds", () => {
   const s = createState();
   for (let z = 0; z < 3; z++)
-    for (let y = 0; y < 2; y++)
+    for (let y = 0; y < 5; y++)
       for (let x = 0; x < 7; x++) s.removed.push(`${x}:${y}:${z}`);
   for (const n of s.npcs)
     Object.assign(n, {
