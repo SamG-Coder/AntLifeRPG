@@ -117,6 +117,31 @@ export function excavate(state, cell, position) {
   state.items.push(item);
   return item;
 }
+export function restAtHome(state, options = {}) {
+  if (state.player.attachment)
+    return {
+      ok: false,
+      reason: "Release your grip on the ground before resting.",
+    };
+  if (state.player.carrying !== null)
+    return {
+      ok: false,
+      reason: "Put down your load before settling into your leaf bed.",
+    };
+  if (distance(state.player, sites.home) > 3)
+    return { ok: false, reason: "Your leaf bed is back in your home chamber." };
+  const arrivals = state.foodSupply?.arrivals ?? 0;
+  const seconds = 120 / nutrition.minutesPerSecond;
+  state.player.groomRemaining = 0;
+  for (let elapsed = 0; elapsed < seconds; elapsed += 0.25)
+    tick(state, Math.min(0.25, seconds - elapsed), options);
+  state.player.energy = 100;
+  return {
+    ok: true,
+    minutes: 120,
+    arrivals: (state.foodSupply?.arrivals ?? 0) - arrivals,
+  };
+}
 export function pickup(state, item, canReach = () => true) {
   if (
     state.player.carrying !== null ||

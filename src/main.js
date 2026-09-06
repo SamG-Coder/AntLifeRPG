@@ -40,6 +40,7 @@ import {
   deposit,
   greet,
   relationship,
+  restAtHome,
 } from "./simulation.js";
 const $ = (id) => document.getElementById(id);
 addEventListener("unhandledrejection", (event) => {
@@ -413,24 +414,16 @@ function dig() {
   toast("The soil breaks free. Lift the clump and carry it away.");
 }
 function rest() {
-  if (surfaceFrame) {
-    toast("Release your grip on the ground before resting.");
+  const result = restAtHome(state, {
+    canWalk: walkable,
+    canMeet: canExchangeScents,
+  });
+  if (!result.ok) {
+    toast(result.reason);
     return;
   }
-  if (distance(state.player, sites.home) > 3) {
-    toast("Your leaf bed is back in your home chamber.");
-    return;
-  }
-  state.player.energy = 100;
-  const arrivalsBeforeRest = state.foodSupply?.arrivals ?? 0;
-  for (let i = 0; i < 150; i++)
-    tick(state, 1, {
-      canWalk: walkable,
-      canMeet: (a, b) =>
-        clearScentPath(a, b, world.solidDensity, world.walkHeight),
-    });
-  state.player.hunger = Math.max(0, state.player.hunger - 8);
-  const arrivals = (state.foodSupply?.arrivals ?? 0) - arrivalsBeforeRest;
+  route = [];
+  const { arrivals } = result;
   toast(
     arrivals > 0
       ? `Two quiet hours beneath the leaf. ${arrivals} fresh seeds arrived in the root garden while you rested.`

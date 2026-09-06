@@ -379,3 +379,13 @@ All 97 tests, lint and build pass. A new regression verifies unavailable airborn
 Browser playtesting reached the garden before day 4 dawn. Eighteen seeds arrived, growing the item count from 130 to 148 and restoring the loose supply to nineteen. At the captured 06:06 frame they were already settled and the pickup prompt was available. The airborne interval was not captured visually in that session; its integration and persistence are covered by tests. The inspected scene ran near 60 FPS.
 
 This is gravity-driven vertical arrival plus stylised rotation. There is no horizontal toss, angular rigid-body integration, bounce, seed-to-seed impact, or collision with every decorative garden prop. The landing surface remains the current ground representation.
+
+## Consistent nourishment during home rest
+
+Home rest now uses a simulation action that advances two game hours in quarter-second steps and restores energy afterward. Nourishment follows the same elapsed-time drain as ordinary play; the additional eight-point deduction has been removed. Rest rejects held loads, surface attachment and distance from the bed before changing state. Successful rest stops the current scent route and cancels grooming.
+
+All 100 tests, lint and build pass. New regressions compare resting with equivalent ordinary simulation steps, verify unchanged state on rejected rest, and check one morning supply arriving and settling across dawn. The normal two-hour nourishment cost is 3.6 points.
+
+Live browser playtesting at home showed nourishment changing from about 66.18 to 62.28 across rest and the intervening observation time, without the former extra eight-point charge. Attempting rest while holding the leaf scrap displayed the put-down instruction and retained the leaf. The leaf was then placed back in the chamber. No runtime errors were observed.
+
+Rest remains an immediate time skip with full energy recovery, rather than a sleep animation or a bed-quality system. Quarter-second simulation steps improve consistency but do not add continuous rigid-body physics or solve the broader collision limitations.
