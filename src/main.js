@@ -15,6 +15,8 @@ import { startGrooming } from "./grooming.js";
 import { clearScentPath } from "./colony-social.js";
 import { separateWorkersFromPlayer } from "./player-separation.js";
 import { currentDuty } from "./duties.js";
+import { nutrition } from "./nutrition.js";
+import { gardenCapacity } from "./food-supply.js";
 import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
@@ -258,7 +260,10 @@ function interact() {
       return;
     }
     if (state.colony) state.colony.food--;
-    state.player.hunger = Math.min(100, state.player.hunger + 25);
+    state.player.hunger = Math.min(
+      100,
+      state.player.hunger + nutrition.playerMeal,
+    );
     toast("Warm seed oils. You feel nourished.");
   } else if (n.kind === "social") {
     greetWorker(n.npc);
@@ -353,7 +358,7 @@ function journal() {
   reserve.textContent = `Colony food: ${state.colony.food} portions · ${state.npcs.length} familiar workers`;
   roster.append(reserve);
   const supply = document.createElement("p");
-  supply.textContent = `A caretaker scatters seeds in the root garden each morning at 06:00, up to 12 uncollected parcels. ${state.foodSupply?.arrivals ?? 0} seeds have arrived since this routine began.`;
+  supply.textContent = `A caretaker scatters seeds in the root garden each morning at 06:00, up to ${gardenCapacity(state)} uncollected parcels to cover the colony's daily meals. ${state.foodSupply?.arrivals ?? 0} seeds have arrived since this routine began.`;
   roster.append(supply);
   const selfCare = document.createElement("p");
   const cleanliness = state.player.cleanliness ?? 78;

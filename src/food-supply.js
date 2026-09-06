@@ -1,4 +1,9 @@
 // A caretaker's daily scatter is a game event in the colony tank.
+import { dailyFoodDemand } from "./nutrition.js";
+
+export function gardenCapacity(state) {
+  return dailyFoodDemand(state.npcs.length) + 3;
+}
 export function advanceFoodSupply(state) {
   state.foodSupply ??= { lastDay: state.day, arrivals: 0, archived: 0 };
   const supply = state.foodSupply;
@@ -7,7 +12,7 @@ export function advanceFoodSupply(state) {
   const loose = state.items.filter(
     (i) => i.kind === "seed" && !i.deposited,
   ).length;
-  const count = Math.max(0, 12 - loose);
+  const count = Math.max(0, gardenCapacity(state) - loose);
   for (let i = 0; i < count; i++) {
     const angle = (state.day * 7 + i) * 2.3999632297;
     const radius = 1.2 + (i % 4) * 0.65;

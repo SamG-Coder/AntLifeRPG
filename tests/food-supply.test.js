@@ -3,6 +3,36 @@ import assert from "node:assert/strict";
 import { createState, tick, validateState } from "../src/simulation.js";
 import { advanceFoodSupply, reservedSeeds } from "../src/food-supply.js";
 import { walkable } from "../src/world.js";
+import { nutrition } from "../src/nutrition.js";
+
+test("twenty colony days fund worker and modeled player meals without starvation", () => {
+  const s = createState();
+  let playerMeals = 0,
+    minimum = 100;
+  for (let i = 0; i < 144000; i++) {
+    tick(s, 0.25, { canWalk: walkable });
+    // Model the player's portion demand independently of browser input.
+    if (s.player.hunger < 35 && s.colony.food > 0) {
+      s.colony.food--;
+      s.player.hunger += nutrition.playerMeal;
+      playerMeals++;
+    }
+    minimum = Math.min(minimum, ...s.npcs.map((n) => n.hunger));
+  }
+  assert.equal(s.day, 21);
+  assert.ok(minimum > 30);
+  assert.ok(playerMeals >= 30);
+  assert.ok(s.colony.food > 0);
+  assert.equal(
+    s.colony.food,
+    45 +
+      s.colony.seedsDelivered -
+      playerMeals -
+      s.npcs.reduce((sum, n) => sum + (n.meals ?? 0), 0),
+  );
+  assert.ok(s.items.length <= 148);
+  assert.ok(validateState(s));
+});
 
 test("morning supply arrives once, persists across reload and lies on garden ground", () => {
   let s = createState();
@@ -10,7 +40,7 @@ test("morning supply arrives once, persists across reload and lies on garden gro
   s.time = 359.9;
   assert.equal(advanceFoodSupply(s), 0);
   s.time = 360;
-  assert.equal(advanceFoodSupply(s), 12);
+  assert.equal(advanceFoodSupply(s), 19);
   assert.ok(s.items.every((i) => walkable(i.x, i.z)));
   const ids = s.items.map((i) => i.id);
   s = JSON.parse(JSON.stringify(s));
@@ -32,7 +62,7 @@ test("daily supply caps uncollected parcels and archives only credited seed disp
     advanceFoodSupply(s);
     for (const item of s.items) item.deposited = true;
   }
-  assert.ok(s.items.length <= 36);
+  assert.ok(s.items.length <= 43);
   assert.equal(s.foodSupply.arrivals, s.foodSupply.archived + s.items.length);
   assert.ok(validateState(s));
   s.foodSupply.lastDay = s.day + 1;
@@ -46,7 +76,7 @@ test("legacy saves adopt the routine without an immediate duplicate scatter", ()
   s.time = 720;
   assert.equal(advanceFoodSupply(s), 0);
   s.day++;
-  assert.equal(advanceFoodSupply(s), 12);
+  assert.equal(advanceFoodSupply(s), 19);
 });
 
 test("low food releases the teaching reserve and workers deliver an actual seed", () => {

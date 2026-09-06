@@ -6,6 +6,7 @@ import { updateWorkerEncounters } from "./colony-social.js";
 import { nurseryWaitingPlace, reserveExcavationCell } from "./work-layout.js";
 import { workerStep } from "./worker-steering.js";
 import { reservedSeeds } from "./food-supply.js";
+import { nutrition } from "./nutrition.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -182,7 +183,7 @@ export function updateColony(
         distance(n, sites.store) < 5
       ) {
         state.colony.food--;
-        n.hunger = Math.min(100, n.hunger + 55);
+        n.hunger = Math.min(100, n.hunger + nutrition.workerMeal);
         n.meals = (n.meals ?? 0) + 1;
         n.lastMealDay = state.day;
         n.breakReason = breakReason(n, state.time);

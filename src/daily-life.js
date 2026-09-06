@@ -1,4 +1,5 @@
 // Deliberately stylised game rhythms, not a species-specific biological model.
+import { nutrition } from "./nutrition.js";
 export function onDuty(worker, minutes) {
   if (worker.role === "forager") return minutes >= 360 && minutes < 1080;
   const local = (minutes + (Math.floor(worker.id / 3) % 3) * 480) % 1440;
@@ -10,7 +11,7 @@ export function updateNeeds(worker, dt) {
   if (worker.cargo || ["excavate", "loosen"].includes(worker.task))
     worker.cleanliness = Math.max(0, worker.cleanliness - dt * 0.12);
   worker.hunger ??= 80 + (worker.id % 5) * 3;
-  worker.hunger = Math.max(0, worker.hunger - dt * 0.018);
+  worker.hunger = Math.max(0, worker.hunger - dt * nutrition.workerDrain);
   const settled = worker.task === "off-duty" && !worker.path?.length;
   worker.energy = Math.max(
     0,

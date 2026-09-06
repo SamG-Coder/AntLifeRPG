@@ -303,3 +303,13 @@ The supply record tracks arrivals and archived display parcels. At each morning 
 All 88 tests, lint and build pass. Tests cover dawn/reload identity, actual walkability of new seed positions, a 59-morning bounded-display run, legacy migration, and a terrain-constrained worker delivering the final seed from an empty reserve. Browser playtesting advanced the completed colony from day 2 to day 3 through actual rest actions. The item count grew from 114 to 126, the saved record showed 12 arrivals, and crew seed deliveries increased from six to fifteen as nine new loads reached the store. No warnings/errors were captured; the inspected scene ran near 60 FPS.
 
 This is a stylised caretaker supply event, not animated falling seeds, plant growth, a simulated caretaker, or a proven balanced long-term economy. Seeds enter as ground parcels; food remains an abstract portion reserve. Initial introductory seeds are still created by world setup. Longer multi-day consumption and physical pile behaviour remain to be improved.
+
+## Consumption-based food allowance
+
+A terrain-constrained 30-day audit exposed sustained shortage under the 12-parcel morning cap: the reserve was empty by day 10, some workers reached zero nourishment by day 16, and shortage persisted through day 30 despite regular deliveries. This was insufficient supply, rather than stopped forager navigation.
+
+Nutrition rates, meal sizes and game-clock rate now have one shared definition used by player consumption, worker consumption and supply planning. The garden allowance is the rounded-up daily portion demand of the current worker population plus the player, with three additional introductory gathering parcels. For 24 workers it is 19. Existing saves retain their daily marker and receive the revised allowance at the next scheduled morning event.
+
+Repeating 30 days with the new allowance, including 50 modeled player meals, ended with 59 portions, 472 crew seed deliveries, 148 active item records and minimum worker nourishment about 34.607. The preserved 20-day regression verifies nourishment above 30, player meal demand, a positive final reserve, exact food accounting against all recorded meals, bounded item records and valid saved state. All 89 tests, lint and build pass. Browser field notes showed the 19-parcel policy while preserving the existing 12-arrival history, with no captured warnings/errors.
+
+The long-run test models player portion demand directly and does not simulate a human's route to every meal, repeated extra hunger costs from resting, delivery disruption, changing population or every crowd arrangement. This establishes a sustainable baseline under the tested routine, not universal food balance or a species-specific metabolic model.
