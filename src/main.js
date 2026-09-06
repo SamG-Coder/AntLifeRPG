@@ -14,6 +14,7 @@ import { stanceSupport } from "./support.js";
 import { startGrooming } from "./grooming.js";
 import { clearScentPath } from "./colony-social.js";
 import { separateWorkersFromPlayer } from "./player-separation.js";
+import { currentDuty } from "./duties.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
@@ -371,33 +372,40 @@ function journal() {
       )
       .join(" / ") || "You have yet to become familiar with your neighbours.";
   $("journal").showModal();
+  const completed = state.nurseryCleared;
+  $("colony-progress").textContent = completed
+    ? `Nursery cleared on day ${completed.day}. You delivered ${completed.playerLoads} soil loads; the crew delivered ${completed.crewLoads}. ${currentDuty(state).text}`
+    : currentDuty(state).text;
   keys.clear();
 }
 $("close").onclick = () => $("journal").close();
+function followScent(key) {
+  const site = sites[key];
+  if (surfaceFrame) {
+    toast("Release your grip on the ground before following a scent.");
+    $("journal").close();
+    return;
+  }
+  route = scentRoute(state.player, key);
+  if (key === "surface") {
+    const seed = state.items
+      .filter((i) => i.kind === "seed" && !i.deposited && i.owner == null)
+      .sort(
+        (a, b) => distance(a, sites.surface) - distance(b, sites.surface),
+      )[0];
+    if (seed) route.push({ x: seed.x, z: seed.z });
+  }
+  $("journal").close();
+  toast(
+    `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
+  );
+}
+$("duty-route").onclick = () => followScent(currentDuty(state).destination);
 for (const [key, site] of Object.entries(sites)) {
   const button = document.createElement("button");
   button.textContent = `Follow scent · ${site.name}`;
   button.className = "scent-choice";
-  button.onclick = () => {
-    if (surfaceFrame) {
-      toast("Release your grip on the ground before following a scent.");
-      $("journal").close();
-      return;
-    }
-    route = scentRoute(state.player, key);
-    if (key === "surface") {
-      const seed = state.items
-        .filter((i) => i.kind === "seed" && !i.deposited && i.owner == null)
-        .sort(
-          (a, b) => distance(a, sites.surface) - distance(b, sites.surface),
-        )[0];
-      if (seed) route.push({ x: seed.x, z: seed.z });
-    }
-    $("journal").close();
-    toast(
-      `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
-    );
-  };
+  button.onclick = () => followScent(key);
   $("journal").append(button);
 }
 const notesButton = document.createElement("button");
@@ -587,11 +595,14 @@ renderer.setAnimationLoop(() => {
   previous = now;
   elapsed += dt;
   if (started && !$("journal").open) {
+    const nurseryWasCleared = !!state.nurseryCleared;
     const groomingBouts = state.player.groomingBouts ?? 0;
     tick(state, dt, {
       canMeet: (a, b) =>
         clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });
+    if (!nurseryWasCleared && state.nurseryCleared)
+      toast("The nursery floor is clear. The colony has room to grow.");
     if ((state.player.groomingBouts ?? 0) > groomingBouts)
       toast("Antennae clean. Ready for the next part of your day.");
     separateWorkersFromPlayer(state.npcs, state.player, dt, walkable);
@@ -757,8 +768,10 @@ renderer.setAnimationLoop(() => {
     const n = nearby();
     $("prompt").style.display = started && n ? "block" : "none";
     $("prompt").textContent = n?.text ?? "";
-    $("objective").textContent =
-      `${state.player.deliveries} clumps delivered · ${state.player.seeds} seeds gathered`;
+    const duty = currentDuty(state);
+    $("duty-title").textContent = duty.title;
+    $("duty-description").textContent = duty.text;
+    $("objective").textContent = duty.progress;
     if (elapsed > toastUntil) $("toast").style.opacity = 0;
   }
   presentation.render();

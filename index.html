@@ -20,9 +20,12 @@
       </section>
       <aside id="task">
         <small>COLONY DUTY</small>
-        <h2>A little room to grow</h2>
-        <p>Follow the amber trail to the excavation face.</p>
+        <h2 id="duty-title">A little room to grow</h2>
+        <p id="duty-description">
+          Follow the amber trail to the excavation face.
+        </p>
         <div id="objective">Loosen soil · carry it to the spoil bed</div>
+        <button id="duty-route">Follow duty scent ↗</button>
       </aside>
       <div id="prompt"></div>
       <footer>
@@ -72,6 +75,7 @@
         Your colony saves automatically in this browser.
       </p>
       <div id="memories"></div>
+      <p id="colony-progress"></p>
     </dialog>
     <script type="module" src="/src/main.js"></script>
   </body>

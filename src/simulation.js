@@ -3,6 +3,7 @@ import { restoreFrame } from "./surface-motor.js";
 import { advanceGrooming, validGrooming } from "./grooming.js";
 import { validWorkerBonds } from "./colony-social.js";
 import { advanceSoilStability, validSoilMotion } from "./soil-stability.js";
+import { recordNurseryCompletion, validNurseryCompletion } from "./duties.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -93,6 +94,7 @@ export function tick(state, dt, { canMeet } = {}) {
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
   advanceSoilStability(state, dt, excavate);
   updateColony(state, dt, { sites, distance, excavate, canMeet });
+  recordNurseryCompletion(state);
 }
 export function excavate(state, cell, position) {
   if (state.removed.includes(cell)) return null;
@@ -191,6 +193,7 @@ export function validateState(state) {
         ["soil", "seed"].includes(i.kind),
     ) &&
     validSoilMotion(state) &&
+    validNurseryCompletion(state) &&
     new Set(state.items.map((i) => i.id)).size === state.items.length &&
     Number.isInteger(state.nextItem) &&
     state.items.every((i) => i.id < state.nextItem) &&

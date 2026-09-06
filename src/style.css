@@ -147,6 +147,14 @@ aside p {
   margin-top: 20px;
   line-height: 1.8;
 }
+#duty-route {
+  margin-top: 12px;
+  padding: 7px 10px;
+  border: 1px solid #bec79345;
+  background: #142012b0;
+  color: #d9d2b0;
+  font-size: 11px;
+}
 footer {
   position: absolute;
   bottom: 32px;
