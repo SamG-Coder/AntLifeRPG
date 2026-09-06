@@ -369,3 +369,13 @@ Drops account for the existing walk-support surface, including the raised static
 All 96 tests, lint and build pass. New tests cover intervening solid terrain, rejection preserving cargo and food, reachable slopes, excessive range, and saved placement height. Browser playtesting completed a surface seed pickup and store handoff with the new checks: food increased from 36 to 37 and cargo cleared. No warnings/errors were captured; the inspected scene ran near 60 FPS.
 
 This is a sampled centre-path check using the current solid field, not swept parcel-volume collision or exact mandible contact. NPC transfer still uses its existing checks. Support offsets are static placement heights rather than a dynamic pile solver, and decorative props absent from the solid/support fields remain outside this check.
+
+## Descending morning seed arrivals
+
+Morning supply seeds now start above the garden and descend using the existing bounded gravity integration. Their rendered orientation tumbles during descent and settles afterward. Airborne seeds cannot be picked up by the player or selected by foragers. Save validation permits unowned, undeposited airborne seeds under the existing finite height/velocity limits. Runtime metrics distinguish falling seeds from falling soil.
+
+All 97 tests, lint and build pass. A new regression verifies unavailable airborne seeds, negative fall velocity, valid midair serialization, conserved identities after landing, and gathering becoming available afterward. The bounded supply/archive test now advances falling parcels to land before marking them delivered. The 20-day food regression still passes.
+
+Browser playtesting reached the garden before day 4 dawn. Eighteen seeds arrived, growing the item count from 130 to 148 and restoring the loose supply to nineteen. At the captured 06:06 frame they were already settled and the pickup prompt was available. The airborne interval was not captured visually in that session; its integration and persistence are covered by tests. The inspected scene ran near 60 FPS.
+
+This is gravity-driven vertical arrival plus stylised rotation. There is no horizontal toss, angular rigid-body integration, bounce, seed-to-seed impact, or collision with every decorative garden prop. The landing surface remains the current ground representation.

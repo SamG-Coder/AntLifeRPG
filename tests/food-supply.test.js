@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createState, tick, validateState } from "../src/simulation.js";
+import {
+  createState,
+  tick,
+  validateState,
+  excavate,
+  pickup,
+} from "../src/simulation.js";
+import { advanceSoilStability } from "../src/soil-stability.js";
+import { hasWorkerJob } from "../src/colony.js";
 import { advanceFoodSupply, reservedSeeds } from "../src/food-supply.js";
 import { walkable } from "../src/world.js";
 import { nutrition } from "../src/nutrition.js";
@@ -60,6 +68,7 @@ test("daily supply caps uncollected parcels and archives only credited seed disp
     s.day = day;
     s.time = 360;
     advanceFoodSupply(s);
+    advanceSoilStability(s, 2, excavate);
     for (const item of s.items) item.deposited = true;
   }
   assert.ok(s.items.length <= 43);
@@ -67,6 +76,29 @@ test("daily supply caps uncollected parcels and archives only credited seed disp
   assert.ok(validateState(s));
   s.foodSupply.lastDay = s.day + 1;
   assert.equal(validateState(s), false);
+});
+
+test("new seeds fall, survive a midair reload, and become available only after landing", () => {
+  let s = createState();
+  s.day = 2;
+  s.time = 360;
+  advanceFoodSupply(s);
+  const ids = s.items.map((i) => i.id);
+  assert.ok(s.items.every((i) => i.fallHeight > 0));
+  assert.equal(pickup(s, s.items[0]), false);
+  assert.equal(hasWorkerJob(s, s.npcs[1]), false);
+  advanceSoilStability(s, 0.2, excavate);
+  assert.ok(s.items.every((i) => i.fallVelocity < 0));
+  s = JSON.parse(JSON.stringify(s));
+  assert.ok(validateState(s));
+  advanceSoilStability(s, 2, excavate);
+  assert.deepEqual(
+    s.items.map((i) => i.id),
+    ids,
+  );
+  assert.ok(s.items.every((i) => i.fallHeight === 0 && i.fallVelocity === 0));
+  assert.ok(hasWorkerJob(s, s.npcs[1]));
+  assert.ok(pickup(s, s.items[0]));
 });
 
 test("legacy saves adopt the routine without an immediate duplicate scatter", () => {

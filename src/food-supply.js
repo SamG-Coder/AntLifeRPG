@@ -23,6 +23,9 @@ export function advanceFoodSupply(state) {
       x: 13 + Math.cos(angle) * radius,
       z: -31 + Math.sin(angle) * radius,
       y: 0,
+      fallHeight: 1.5 + (i % 6) * 0.25,
+      fallVelocity: 0,
+      yaw: angle,
     });
   }
   supply.arrivals += count;

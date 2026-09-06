@@ -55,6 +55,7 @@ export function hasWorkerJob(state, worker) {
     (item) =>
       !item.deposited &&
       item.owner == null &&
+      !(item.fallHeight > 0) &&
       item.id !== state.player.carrying,
   );
   return worker.role === "forager"
@@ -213,6 +214,7 @@ export function updateColony(
       const available = state.items.filter(
         (i) =>
           i.kind === "seed" &&
+          !(i.fallHeight > 0) &&
           !i.deposited &&
           i.owner == null &&
           i.id !== state.player.carrying,

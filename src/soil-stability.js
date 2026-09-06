@@ -79,7 +79,7 @@ export function validSoilMotion(state) {
             item.fallVelocity <= 0 &&
             item.fallVelocity >= -10)) &&
         (!(item.fallHeight > 0) ||
-          (item.kind === "soil" &&
+          (["soil", "seed"].includes(item.kind) &&
             !item.deposited &&
             item.owner == null &&
             item.id !== state.player.carrying)),

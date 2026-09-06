@@ -191,6 +191,13 @@ function syncItems() {
     }
     m.visible = item.id !== state.player.carrying && item.owner == null;
     if (item.kind === "leaf") m.rotation.y = item.yaw ?? 0;
+    if (item.kind === "seed") {
+      m.rotation.set(
+        item.fallHeight > 0 ? Math.sin(item.fallHeight * 5) * 0.4 : 0,
+        item.yaw ?? 0,
+        item.fallHeight > 0 ? item.fallHeight * 2 : 0,
+      );
+    }
     m.position.set(
       item.x,
       height(item.x, item.z) +
@@ -946,7 +953,12 @@ renderer.setAnimationLoop(() => {
         ? null
         : player.root.position.y - height(state.player.x, state.player.z),
       removed: state.removed.length,
-      fallingSoil: state.items.filter((item) => item.fallHeight > 0).length,
+      fallingSoil: state.items.filter(
+        (item) => item.kind === "soil" && item.fallHeight > 0,
+      ).length,
+      fallingSeeds: state.items.filter(
+        (item) => item.kind === "seed" && item.fallHeight > 0,
+      ).length,
       soilFalls: state.soilFalls ?? 0,
       items: state.items.length,
       carrying: state.player.carrying,
