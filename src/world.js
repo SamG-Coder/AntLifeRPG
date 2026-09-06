@@ -5,6 +5,8 @@ import { implicitMesh } from "./terrain.js";
 import { cameraEllipsoid, cameraCapsule } from "./camera-props.js";
 import { ellipsoidTop } from "./prop-support.js";
 import { excavationDensity } from "./excavation-field.js";
+import { taperedRootGeometry } from "./root-geometry.js";
+import { projectContact } from "./contact.js";
 import { leafTexture } from "./foliage.js";
 import { restingPlace } from "./colony-layout.js";
 import {
@@ -268,7 +270,12 @@ export function buildWorld(scene, state) {
     const curve = new T.CatmullRomCurve3(
       points.map((p) => new T.Vector3(...p)),
     );
-    const mesh = new T.Mesh(new T.TubeGeometry(curve, 40, r, 9, false), bark);
+    const mesh = new T.Mesh(
+      r > 0.1
+        ? new T.TubeGeometry(curve, 40, r, 9, false)
+        : taperedRootGeometry(curve, r),
+      bark,
+    );
     if (r > 0.1) {
       const samples = curve.getPoints(40);
       for (let i = 1; i < samples.length; i++)
@@ -277,6 +284,7 @@ export function buildWorld(scene, state) {
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     scene.add(mesh);
+    return curve;
   };
   root(
     [
@@ -310,15 +318,71 @@ export function buildWorld(scene, state) {
   );
   for (let i = 0; i < 40; i++) {
     const x = -4 + rng() * 8,
-      z = -9 - rng() * 16;
-    root(
-      [
-        [x, 3 + rng(), z],
-        [x + 0.3, 2.5, z + 0.6],
-        [x + 0.5, 1.2 + rng(), z + 1.2],
-      ],
-      0.018 + rng() * 0.035,
+      z = -9 - rng() * 16,
+      lengthChoice = rng(),
+      bendChoice = rng(),
+      radiusChoice = rng();
+    // Preserve the random sequence for the rest of the world while locating
+    // these fine roots on the real ceiling instead of arbitrary heights.
+    if (!walkable(x, z)) continue;
+    const floor = height(x, z);
+    let ceiling = floor + 0.6;
+    while (ceiling < floor + 7 && caveDensity(x, ceiling, z) < 0)
+      ceiling += 0.1;
+    const contact = projectContact(caveDensity, new T.Vector3(x, ceiling, z), {
+      maxTravel: 0.25,
+    });
+    if (!contact || contact.normal.y > -0.55) continue;
+    const anchor = contact.position
+      .clone()
+      .addScaledVector(contact.normal, -0.045);
+    const length = Math.min(0.65 + lengthChoice * 1.2, anchor.y - floor - 1.5);
+    if (length < 0.35) continue;
+    const angle = i * 2.39996,
+      bend = 0.15 + bendChoice * 0.4;
+    const side = new T.Vector3(Math.cos(angle), 0, Math.sin(angle));
+    const points = [
+      anchor,
+      anchor
+        .clone()
+        .addScaledVector(side, bend * 0.35)
+        .add(new T.Vector3(0, -length * 0.3, 0)),
+      anchor
+        .clone()
+        .addScaledVector(side, bend)
+        .add(new T.Vector3(0, -length * 0.7, 0)),
+      anchor
+        .clone()
+        .addScaledVector(side, bend * 0.65)
+        .add(new T.Vector3(0, -length, 0)),
+    ];
+    const radius = 0.025 + radiusChoice * 0.035;
+    const parent = root(
+      points.map((p) => p.toArray()),
+      radius,
     );
+    if (i % 3 !== 0) {
+      const fork = parent.getPointAt(0.42 + radiusChoice * 0.16);
+      const twigSide = new T.Vector3(-side.z, 0, side.x).multiplyScalar(
+        i % 2 ? 1 : -1,
+      );
+      root(
+        [
+          fork.toArray(),
+          fork
+            .clone()
+            .addScaledVector(twigSide, 0.2)
+            .add(new T.Vector3(0, -0.15, 0))
+            .toArray(),
+          fork
+            .clone()
+            .addScaledVector(twigSide, 0.35 + bendChoice * 0.2)
+            .add(new T.Vector3(0, -length * 0.4, 0))
+            .toArray(),
+        ],
+        radius * 0.4,
+      );
+    }
   }
   const leafMap = leafTexture();
   const leafMat = new T.MeshPhysicalMaterial({
