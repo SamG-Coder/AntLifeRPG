@@ -411,3 +411,13 @@ All 107 tests, lint and build pass. New regressions verify six different seed ta
 Browser playtesting used a fresh local colony and followed the first gathering shift to the garden. The crew delivered six of the nine initial seeds, increasing food from 45 to 51. No warnings/errors were captured. The brief walking-target interval was missed in the snapshots; distinct selection is directly covered by the automated scheduler tests, not established by those screenshots. Runtime metrics expose active worker/item targets for later observation.
 
 This prevents duplicate parcel intentions; it does not provide full-body or leg collision, swept cargo collision, or guaranteed crowd clearance. The garden approach briefly showed an obscured camera view behind terrain/props, which remains a separate visual-navigation issue. Target claims are released by invalidation or worker needs, not by a general path-progress timeout.
+
+## Camera collision matches the rendered cave
+
+The obscured garden approach was reproduced by ray-testing the actual cave triangles along a simulated camera transition. The former analytical density allowed fourteen frames with cave triangles less than two units in front of the camera, including hits only a few centimetres away. The rendered cave uses a sampled tetrahedral mesh, whose interpolated surface differs from the original nonlinear field.
+
+Implicit surface generation now returns both its geometry and a collision sampler using the same stored grid values, cube diagonal, and six tetrahedra. Camera collision uses that sampled cave field. Existing mesh-only callers retain their wrapper, and points outside the generated volume fall back to the original field. The cave appearance and player movement field are unchanged.
+
+All 109 tests, lint and build pass. New regressions check triangle-interior and vertex agreement with the sampled collision field, bounded-volume fallback, and the actual camera rig travelling along the garden approach. The old field reproduces the obstruction; the sampled field produces zero close cave-triangle hits on that same trajectory. This checks rendered geometry rather than only testing a density against itself.
+
+Live browser playtesting reloaded the build and travelled from the communal store toward the garden. A timed approach capture showed the ant and tunnel opening clearly; the route reached the garden without captured warnings/errors. Inspected scenes ran near 60 FPS. Rocks and vegetation still partially obstruct the ant in the garden, and the screenshots do not prove visibility on every frame or every camera orbit. The fix aligns cave collision with its mesh; full-frustum clearance and collision/occlusion for every decorative prop remain incomplete.

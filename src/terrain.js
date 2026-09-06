@@ -2,6 +2,10 @@ import * as T from "three/webgpu";
 // A bounded implicit surface, polygonised with six consistently split tetrahedra per cell.
 // Density samples are shared; geometric normals come from the scalar-field gradient.
 export function implicitMesh(density, bounds, step = 0.45) {
+  return implicitSurface(density, bounds, step).geometry;
+}
+
+export function implicitSurface(density, bounds, step = 0.45) {
   const [min, max] = bounds;
   const nx = Math.ceil((max[0] - min[0]) / step),
     ny = Math.ceil((max[1] - min[1]) / step),
@@ -108,5 +112,65 @@ export function implicitMesh(density, bounds, step = 0.45) {
   const g = new T.BufferGeometry();
   g.setAttribute("position", new T.Float32BufferAttribute(positions, 3));
   g.setAttribute("normal", new T.Float32BufferAttribute(normals, 3));
-  return g;
+  // Use the same cube diagonal and six tetrahedra as the emitted triangles.
+  // Trilinear interpolation would describe a different surface between samples.
+  const sampledDensity = (x, y, z) => {
+    const gx = (x - min[0]) / step,
+      gy = (y - min[1]) / step,
+      gz = (z - min[2]) / step;
+    if (gx < 0 || gy < 0 || gz < 0 || gx > nx || gy > ny || gz > nz)
+      return density(x, y, z);
+    const ix = Math.min(nx - 1, Math.floor(gx)),
+      iy = Math.min(ny - 1, Math.floor(gy)),
+      iz = Math.min(nz - 1, Math.floor(gz));
+    const fx = gx - ix,
+      fy = gy - iy,
+      fz = gz - iz;
+    let high, middle, low, first, second;
+    if (fx >= fy && fx >= fz) {
+      high = fx;
+      first = 1;
+      if (fy >= fz) {
+        middle = fy;
+        low = fz;
+        second = sx;
+      } else {
+        middle = fz;
+        low = fy;
+        second = sx * sy;
+      }
+    } else if (fy >= fz) {
+      high = fy;
+      first = sx;
+      if (fx >= fz) {
+        middle = fx;
+        low = fz;
+        second = 1;
+      } else {
+        middle = fz;
+        low = fx;
+        second = sx * sy;
+      }
+    } else {
+      high = fz;
+      first = sx * sy;
+      if (fx >= fy) {
+        middle = fx;
+        low = fy;
+        second = 1;
+      } else {
+        middle = fy;
+        low = fx;
+        second = sx;
+      }
+    }
+    const base = idx(ix, iy, iz);
+    return (
+      values[base] * (1 - high) +
+      values[base + first] * (high - middle) +
+      values[base + first + second] * (middle - low) +
+      values[base + 1 + sx + sx * sy] * low
+    );
+  };
+  return { geometry: g, density: sampledDensity };
 }

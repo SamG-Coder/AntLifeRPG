@@ -1,7 +1,7 @@
 import * as T from "three/webgpu";
 import { random, capsuleBetween } from "./math.js";
 import { sites } from "./simulation.js";
-import { implicitMesh } from "./terrain.js";
+import { implicitMesh, implicitSurface } from "./terrain.js";
 import { cameraEllipsoid, cameraCapsule } from "./camera-props.js";
 import { ellipsoidTop } from "./prop-support.js";
 import { excavationDensity } from "./excavation-field.js";
@@ -195,17 +195,15 @@ export function buildWorld(scene, state) {
     .mul(color(0xb8a089))
     .mul(mx_noise_float(positionWorld.mul(3)).mul(0.3).add(0.85));
   soilNode.normalNode = bumpMap(fine, 0.065);
-  const cave = new T.Mesh(
-    implicitMesh(
-      caveDensity,
-      [
-        [-23, -0.1, -42],
-        [24, 7, 8],
-      ],
-      0.42,
-    ),
-    soilNode,
+  const caveSurface = implicitSurface(
+    caveDensity,
+    [
+      [-23, -0.1, -42],
+      [24, 7, 8],
+    ],
+    0.42,
   );
+  const cave = new T.Mesh(caveSurface.geometry, soilNode);
   cave.castShadow = true;
   cave.receiveShadow = true;
   scene.add(cave);
@@ -692,7 +690,7 @@ export function buildWorld(scene, state) {
     rebuildExcavation,
     cameraDensity: (x, y, z) => {
       let density = Math.max(
-        caveDensity(x, y, z),
+        caveSurface.density(x, y, z),
         height(x, z) - y,
         excavationField(x, y, z),
       );
