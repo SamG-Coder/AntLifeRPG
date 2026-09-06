@@ -88,6 +88,8 @@ for (const [x, y, z, color, intensity] of [
   [0, 2, -12, 0xe6bc70, 14],
   [-13, 2, -25, 0xe1a163, 20],
   [6, 4, -22, 0xd9e9aa, 18],
+  [-13, 2, -6, 0xc6b887, 13],
+  [13, 2, -6, 0xbecb98, 13],
 ]) {
   const l = new T.PointLight(color, intensity, 12, 1.6);
   l.position.set(x, y, z);

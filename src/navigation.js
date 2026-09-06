@@ -1,7 +1,9 @@
 import { sites, distance } from "./simulation.js";
 const links = {
   home: ["store"],
-  store: ["home", "dig", "surface"],
+  store: ["home", "dig", "surface", "westRest", "eastRest"],
+  westRest: ["store"],
+  eastRest: ["store"],
   dig: ["store", "spoil"],
   spoil: ["dig"],
   surface: ["store"],

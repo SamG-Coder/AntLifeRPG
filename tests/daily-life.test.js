@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createState, tick } from "../src/simulation.js";
 import { onDuty } from "../src/daily-life.js";
+import { restingPlace } from "../src/colony-layout.js";
 
 test("foragers rest at night while underground shifts are staggered within a role", () => {
   assert.equal(onDuty({ id: 1, role: "forager" }, 1200), false);
@@ -50,7 +51,8 @@ test("nightfall does not abandon or duplicate an owned load", () => {
   assert.equal(s.items[0].deposited, true);
   assert.equal(n.cargo, null);
   assert.equal(n.task, "off-duty");
-  assert.ok(Math.hypot(n.x, n.z + 14) < 5);
+  const bed = restingPlace(n.id);
+  assert.ok(Math.hypot(n.x - bed.x, n.z - bed.z) < 0.4);
 });
 
 test("hungry foragers can replenish an empty food store", () => {

@@ -72,3 +72,12 @@ Greetings now pause a worker for 2.8 seconds, turn it toward the player and resu
 The real store playtest exposed that E always selected eating before greeting. Added G as a dedicated nearby-worker greeting key and documented it in controls. G successfully greeted Sorrel in the saved colony; the roster displayed 'Exchanging scents with you', and the existing shared-work memory plus the new greeting made Sorrel a Familiar worker. Repeating G did not add another daily memory. No captured browser warnings/errors. Tests verify proximity, pause/resume of an owned delivery, conservation and daily trust; all 19 pass.
 
 The store is visibly overcrowded when all idle ants gather there. The next spatial improvement should provide separate resting alcoves and enough room for the actual body/leg span. The present centre-distance separation does not prevent appendage overlap. The social animation is a foundation, not a finished reciprocal encounter system.
+
+## Separate resting chambers
+
+Added fern and moss sleeping chambers west and east of the store, physically carved into the shared cave density and connected by navigable tunnels. Twenty-four stable worker slots are spaced 2.7 units apart, with individual leaf pads and softer chamber lighting. Workers go to the store for meals and then return to their own resting chamber. Existing off-duty saves are redirected from the old store destination without replacing worker identities, cargo or memories.
+
+Route tests sample every site-to-chamber path through the cave clearance field, and verify slot spacing and wall clearance. The saved-idle-crew regression initially revealed that passing traffic could push settled workers away permanently. Workers now return to displaced resting spots. All 21 tests pass, including meals and owned deliveries across nightfall.
+
+Actual browser travel reached the fern sleeping chamber from the existing store save, showing twelve spaced workers and accessible greetings. The camera remained inside the cave and no captured warnings/errors appeared. This reduces store overcrowding; it does not implement full body/appendage collision, a sleeping pose, organic nest architecture or species-accurate housing. The room layout is still visibly regular and the broad ceiling needs visual refinement.
+The return browser trip verified that the communal store was clear of idle crews while the saved food supply and player deliveries remained intact. Saved an unretouched canvas capture in docs/screenshots/store-after-resting-chambers.png.

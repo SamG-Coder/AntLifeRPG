@@ -3,6 +3,7 @@ import { random, capsuleBetween } from "./math.js";
 import { sites } from "./simulation.js";
 import { implicitMesh } from "./terrain.js";
 import { leafTexture } from "./foliage.js";
+import { restingPlace } from "./colony-layout.js";
 import {
   texture as textureNode,
   triplanarTexture,
@@ -34,6 +35,8 @@ function segmentDistance(x, z, a, b) {
   return Math.hypot(x - a.x - t * dx, z - a.z - t * dz);
 }
 const paths = [
+  ["store", "westRest", 2.6],
+  ["store", "eastRest", 2.6],
   ["home", "store", 2.6],
   ["store", "dig", 2.5],
   ["store", "surface", 2.9],
@@ -42,6 +45,8 @@ const paths = [
 export function field(x, z) {
   let d = Infinity;
   for (const [name, radius] of [
+    ["westRest", 6.5],
+    ["eastRest", 6.5],
     ["home", 6],
     ["store", 6],
     ["dig", 5],
@@ -356,6 +361,17 @@ export function buildWorld(scene, state) {
   leaf(-2, 0.03, 1, 3.1, -0.65);
   leaf(-1, 0.08, 1.5, 2.5, -0.3);
   leaf(1, 0.05, -14, 2.7, 0.6);
+  for (let id = 0; id < 24; id++) {
+    const p = restingPlace(id);
+    const angle = id * 2.39996;
+    leaf(
+      p.x - Math.sin(angle) * 0.825,
+      height(p.x, p.z) + 0.025,
+      p.z - Math.cos(angle) * 0.825,
+      1.65,
+      angle,
+    );
+  }
   // Surface vegetation uses curved, tapered blades with physical translucency.
   for (let i = 0; i < 95; i++) {
     const x = 5 + rng() * 17,

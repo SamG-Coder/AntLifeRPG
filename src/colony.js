@@ -1,5 +1,6 @@
 import { scentRoute } from "./navigation.js";
 import { updateNeeds, breakReason, onDuty } from "./daily-life.js";
+import { restingPlace } from "./colony-layout.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -21,13 +22,11 @@ function go(n, destination, position) {
 }
 
 function restAwayFromWork(n) {
-  const angle = n.id * 2.39996;
-  const radius = 2.2 + (n.id % 3) * 0.85;
-  go(n, "store");
-  n.path[n.path.length - 1] = {
-    x: Math.cos(angle) * radius,
-    z: -14 + Math.sin(angle) * radius,
-  };
+  const place = restingPlace(n.id);
+  if (n.breakReason === "meal") go(n, "store");
+  else {
+    go(n, place.chamber, { x: place.x, z: place.z });
+  }
   n.cell = null;
   n.task = "off-duty";
 }
@@ -71,6 +70,15 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
     if (!n.cargo && n.breakReason && n.task !== "off-duty") {
       restAwayFromWork(n);
       n.wait = 0;
+    }
+    if (!n.cargo && n.task === "off-duty") {
+      const expected =
+        n.breakReason === "meal" ? "store" : restingPlace(n.id).chamber;
+      if (n.destination !== expected) restAwayFromWork(n);
+      else if (expected !== "store" && !n.path?.length) {
+        const bed = restingPlace(n.id);
+        if (distance(n, bed) > 0.35) n.path = [{ x: bed.x, z: bed.z }];
+      }
     }
     if (n.wait > 0) {
       n.wait -= dt;
@@ -126,6 +134,8 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
         n.meals = (n.meals ?? 0) + 1;
         n.lastMealDay = state.day;
         n.breakReason = breakReason(n, state.time);
+        restAwayFromWork(n);
+        continue;
       }
       if (n.breakReason) continue;
       const looseLoad = state.items.some(

@@ -1,4 +1,6 @@
+import { restingChambers } from "./colony-layout.js";
 export const sites = {
+  ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
   store: { x: 0, z: -14, name: "The communal store" },
   dig: { x: -14, z: -25, name: "The new nursery" },
