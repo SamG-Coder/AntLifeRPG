@@ -267,7 +267,11 @@ function nearby() {
   if (distance(p, sites.dig) < 5)
     return {
       kind: "dig",
-      text: "Q · Scrape the earth face · E lift loose soil",
+      text: state.nurseryLining?.completedDay
+        ? "Nursery lined · Six leaves laid by you and your nestmates"
+        : state.nurseryCleared
+          ? "Nursery floor clear · Leaf lining is the next job"
+          : "Q · Scrape the earth face · E lift loose soil",
     };
   return null;
 }
@@ -402,7 +406,11 @@ function dig() {
     }
   }
   if (!closest) {
-    toast("Move close to the exposed earth face in the new nursery.");
+    toast(
+      state.nurseryCleared
+        ? "The excavation is finished. This chamber is ready for its next part in colony life."
+        : "Move close to the exposed earth face in the new nursery.",
+    );
     return;
   }
   const [id, m] = closest;
