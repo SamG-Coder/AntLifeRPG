@@ -82,7 +82,7 @@ export function createState() {
     settings: { firstPerson: false },
   };
 }
-export function tick(state, dt, { canMeet } = {}) {
+export function tick(state, dt, { canMeet, canWalk } = {}) {
   state.time += dt * 0.8;
   if (state.time >= 1440) {
     state.day++;
@@ -93,7 +93,7 @@ export function tick(state, dt, { canMeet } = {}) {
   advanceGrooming(p, dt);
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
   advanceSoilStability(state, dt, excavate);
-  updateColony(state, dt, { sites, distance, excavate, canMeet });
+  updateColony(state, dt, { sites, distance, excavate, canMeet, canWalk });
   recordNurseryCompletion(state);
 }
 export function excavate(state, cell, position) {

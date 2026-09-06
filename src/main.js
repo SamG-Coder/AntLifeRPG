@@ -331,6 +331,7 @@ function rest() {
   state.player.energy = 100;
   for (let i = 0; i < 150; i++)
     tick(state, 1, {
+      canWalk: walkable,
       canMeet: (a, b) =>
         clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });
@@ -598,6 +599,7 @@ renderer.setAnimationLoop(() => {
     const nurseryWasCleared = !!state.nurseryCleared;
     const groomingBouts = state.player.groomingBouts ?? 0;
     tick(state, dt, {
+      canWalk: walkable,
       canMeet: (a, b) =>
         clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });

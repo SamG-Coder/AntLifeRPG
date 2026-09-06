@@ -54,7 +54,7 @@ export function field(x, z) {
     ["eastRest", 6.5],
     ["home", 6],
     ["store", 6],
-    ["dig", 5],
+    ["dig", 6],
     ["surface", 9],
     ["spoil", 3],
   ])

@@ -267,3 +267,13 @@ Fine hanging roots now start on projected cave-ceiling contacts, embed slightly 
 A direct geometry check verified finite positions/normals and taper from radius 0.06 to approximately 0.0021. All 74 existing tests, lint and production build pass. Production-preview inspection at the communal store showed the curved, branching silhouettes above the walking space, around 60 FPS with no captured warnings/errors. The screenshot still shows substantial worker overlap at the store, a separate movement issue.
 
 Fine roots remain decorative and outside locomotion/camera collision. This pass does not change their material into a new high-detail asset, add root hairs or motion, or establish the final macro visual quality. The larger roots can still look too cylindrical at close range.
+
+## Local worker steering and walkable-boundary recovery
+
+Ground workers now compare short candidate paths for progress and clearance from nearby workers and a ground-level player, with a small right-hand preference to resolve symmetric passing choices. Both normal simulation and rest fast-forward pass the actual walkable-area predicate. Existing overlap correction now rejects pushes outside that area. Saved workers already displaced beyond the boundary recover toward sampled nearby valid ground before resuming avoidance.
+
+The constrained full-colony check exposed that the nursery footprint excluded rear excavation parcels. Its radius increased from five to six so every parcel lies in the ground-navigation area. After the boundary and footprint fixes, a 900-second simulation with the player at the store removed and delivered all 105 soil parcels, left no loose soil and ended with every worker on walkable ground. The regression now preserves this case.
+
+All 78 tests pass, along with lint/build. Tests also cover opposing workers passing and reaching opposite destinations with more than 1.1 units of root-position separation, passing a stationary player inside a narrow corridor, and recovery from outside a boundary. Production preview resumed the crowded store save; the area around the stationary player cleared as workers continued to their resting chambers. The inspected scene ran near 60 FPS with no warnings/errors.
+
+This is local point-clearance steering and bounded root-position separation, not oriented body/leg collision, velocity prediction, global crowd routing, force-based motion or universal deadlock prevention. Close contact and abrupt steering can still occur in dense groups. The single browser scene does not establish broad traffic or performance guarantees.

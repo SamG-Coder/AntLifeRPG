@@ -4,6 +4,7 @@ import { restingPlace } from "./colony-layout.js";
 import { startGrooming, advanceGrooming } from "./grooming.js";
 import { updateWorkerEncounters } from "./colony-social.js";
 import { nurseryWaitingPlace, reserveExcavationCell } from "./work-layout.js";
+import { workerStep } from "./worker-steering.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -59,7 +60,7 @@ export function hasWorkerJob(state, worker) {
 export function updateColony(
   state,
   dt,
-  { sites, distance, excavate, canMeet },
+  { sites, distance, excavate, canMeet, canWalk },
 ) {
   state.colony ??= { soilDelivered: 0, seedsDelivered: 0, food: 45 };
   const jobAvailability = new Map();
@@ -134,8 +135,16 @@ export function updateColony(
         continue;
       }
       const step = Math.min(d, dt * (n.cargo ? 1.05 : 1.35));
-      n.x += ((target.x - n.x) / d) * step;
-      n.z += ((target.z - n.z) / d) * step;
+      const next = workerStep(
+        n,
+        target,
+        step,
+        state.npcs,
+        state.player,
+        canWalk,
+      );
+      n.x = next.x;
+      n.z = next.z;
       if (n.cargo) {
         const item = state.items.find((i) => i.id === n.cargo);
         if (item) {
@@ -287,10 +296,14 @@ export function updateColony(
         const dx = d > 0.001 ? (a.x - b.x) / d : (i + j) % 2 ? 1 : -1,
           dz = d > 0.001 ? (a.z - b.z) / d : 0;
         const push = Math.min(0.04, (1.4 - d) * 0.2) * Math.min(1, dt * 20);
-        a.x += dx * push;
-        a.z += dz * push;
-        b.x -= dx * push;
-        b.z -= dz * push;
+        if (!canWalk || canWalk(a.x + dx * push, a.z + dz * push)) {
+          a.x += dx * push;
+          a.z += dz * push;
+        }
+        if (!canWalk || canWalk(b.x - dx * push, b.z - dz * push)) {
+          b.x -= dx * push;
+          b.z -= dz * push;
+        }
       }
     }
 }
