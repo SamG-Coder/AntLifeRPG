@@ -195,3 +195,13 @@ All 55 tests pass, including cargo/route preservation, symmetric records, daily 
 This is an initial social graph. Familiarity does not yet change partner choice, assistance, leisure or conflict. Encounters use proximity without a wall/line-of-contact test, do not approach a precise antenna-contact pose, and can briefly pause working carriers. More nuanced needs/role/context decisions and consequential relationships remain necessary.
 
 Reload restored the earlier autosave with two completed bonds and one in-progress encounter; the five-bond live snapshot had not yet reached the periodic save. Serialization tests separately verify the complete symmetric records.
+
+## Soil-aware encounters and familiar partner choice
+
+Worker exchanges now check a sampled path at approximate head height against the game's detailed soil and excavation field, both before starting and while active. An obstruction cancels the exchange without awarding familiarity. The same check is wired into ordinary simulation and rest fast-forward. Eligible nearby partners are ranked by distance with a capped familiarity bonus; cooldowns, urgent needs, the 2.8-unit range and daily encounter limit still apply.
+
+All 57 tests, lint and production build pass. Tests cover an intervening soil slab preventing and cancelling an encounter, familiar partner preference in a close choice, and distance/range/cooldown overriding even a long encounter history. Production preview restored the existing two acquaintance pairs and rendered the colony without captured warnings/errors. Soil obstruction and partner-choice outcomes are verified by tests rather than a staged browser encounter.
+
+This is a sampled soil clearance check, not a precise antenna-contact pose or a biological scent propagation model. Decorative props and other ants do not obstruct the exchange path. Familiarity still has no assistance, shared leisure or conflict consequences.
+
+After closing the journal, live simulation increased completed worker bonds from two to four while soil deliveries rose from 26 to 28. The store screenshot still shows the player overlapping decorative seeds, confirming the separate ground-prop locomotion collision gap.

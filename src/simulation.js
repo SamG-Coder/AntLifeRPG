@@ -80,7 +80,7 @@ export function createState() {
     settings: { firstPerson: false },
   };
 }
-export function tick(state, dt) {
+export function tick(state, dt, { canMeet } = {}) {
   state.time += dt * 0.8;
   if (state.time >= 1440) {
     state.day++;
@@ -90,7 +90,7 @@ export function tick(state, dt) {
   p.hunger = Math.max(0, p.hunger - dt * 0.024);
   advanceGrooming(p, dt);
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
-  updateColony(state, dt, { sites, distance, excavate });
+  updateColony(state, dt, { sites, distance, excavate, canMeet });
 }
 export function excavate(state, cell, position) {
   if (state.removed.includes(cell)) return null;

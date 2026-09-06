@@ -12,6 +12,7 @@ import {
 import { CameraRig } from "./camera.js";
 import { stanceSupport } from "./support.js";
 import { startGrooming } from "./grooming.js";
+import { clearScentPath } from "./colony-social.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
@@ -321,7 +322,10 @@ function rest() {
     return;
   }
   state.player.energy = 100;
-  for (let i = 0; i < 150; i++) tick(state, 1);
+  for (let i = 0; i < 150; i++)
+    tick(state, 1, {
+      canMeet: (a, b) => clearScentPath(a, b, world.solidDensity, height),
+    });
   state.player.hunger = Math.max(0, state.player.hunger - 8);
   toast("Two quiet hours beneath the leaf. The colony carries on.");
 }
@@ -574,7 +578,9 @@ renderer.setAnimationLoop(() => {
   elapsed += dt;
   if (started && !$("journal").open) {
     const groomingBouts = state.player.groomingBouts ?? 0;
-    tick(state, dt);
+    tick(state, dt, {
+      canMeet: (a, b) => clearScentPath(a, b, world.solidDensity, height),
+    });
     if ((state.player.groomingBouts ?? 0) > groomingBouts)
       toast("Antennae clean. Ready for the next part of your day.");
     for (const n of state.npcs) {

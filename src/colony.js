@@ -42,9 +42,13 @@ function hasDigWork(state) {
 }
 
 /** NPC cargo refers to the same persistent item table used by the player. */
-export function updateColony(state, dt, { sites, distance, excavate }) {
+export function updateColony(
+  state,
+  dt,
+  { sites, distance, excavate, canMeet },
+) {
   state.colony ??= { soilDelivered: 0, seedsDelivered: 0, food: 45 };
-  updateWorkerEncounters(state, dt);
+  updateWorkerEncounters(state, dt, canMeet);
   for (const n of state.npcs) {
     if (!n.workVersion) {
       n.workVersion = 1;

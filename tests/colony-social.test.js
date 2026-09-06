@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { updateWorkerEncounters } from "../src/colony-social.js";
+import {
+  updateWorkerEncounters,
+  clearScentPath,
+} from "../src/colony-social.js";
 import { createState, tick, validateState } from "../src/simulation.js";
 
 function pairState() {
@@ -56,6 +59,59 @@ test("nearby workers pause with cargo intact, then remember each other symmetric
   updateWorkerEncounters(state, 0.1);
   updateWorkerEncounters(state, 3);
   assert.equal(a.bonds[0].meetings, 2);
+});
+
+test("intervening soil prevents and cancels an encounter without awarding a bond", () => {
+  const state = pairState(),
+    a = state.npcs[0],
+    b = state.npcs[1];
+  const blocked = (left, right) =>
+    clearScentPath(
+      left,
+      right,
+      (x) => 0.15 - Math.abs(x + 11),
+      () => 0,
+    );
+  assert.equal(blocked(a, b), false);
+  updateWorkerEncounters(state, 0.1, blocked);
+  assert.equal(a.encounterRemaining, undefined);
+  updateWorkerEncounters(state, 0.1, () => true);
+  assert.ok(a.encounterRemaining > 0);
+  updateWorkerEncounters(state, 0.1, blocked);
+  assert.equal(a.encounterRemaining, 0);
+  assert.equal(a.bonds, undefined);
+});
+
+test("a familiar nearby partner wins a close choice without defeating distance or availability", () => {
+  const state = pairState(),
+    a = state.npcs[0],
+    stranger = state.npcs[1],
+    friend = state.npcs[2];
+  Object.assign(friend, { x: -12.2, z: -21, socialCooldown: 0, hunger: 90 });
+  a.bonds = [{ id: friend.id, meetings: 2, lastDay: 1 }];
+  state.day = 2;
+  updateWorkerEncounters(state, 0.1);
+  assert.equal(a.encounterPartner, friend.id);
+  assert.equal(stranger.encounterRemaining, undefined);
+  for (const adjustment of [
+    (friend) => (friend.x = -12.9),
+    (friend) => (friend.socialCooldown = 20),
+    (_friend, stranger) => (stranger.x = -10.5),
+  ]) {
+    const otherState = pairState();
+    const [worker, otherStranger, otherFriend] = otherState.npcs;
+    Object.assign(otherFriend, {
+      x: -12.2,
+      z: -21,
+      socialCooldown: 0,
+      hunger: 90,
+    });
+    worker.bonds = [{ id: otherFriend.id, meetings: 100, lastDay: 1 }];
+    otherState.day = 2;
+    adjustment(otherFriend, otherStranger);
+    updateWorkerEncounters(otherState, 0.1);
+    assert.equal(worker.encounterPartner, otherStranger.id);
+  }
 });
 test("urgent hunger and player greetings cancel encounters without awarding familiarity", () => {
   for (const change of [

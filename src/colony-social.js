@@ -27,7 +27,36 @@ function finish(a, b, day, completed) {
   }
 }
 
-export function updateWorkerEncounters(state, dt) {
+export function clearScentPath(a, b, density, height) {
+  const ay = height(a.x, a.z) + 0.65,
+    by = height(b.x, b.z) + 0.65;
+  const steps = Math.max(
+    1,
+    Math.ceil(Math.hypot(a.x - b.x, ay - by, a.z - b.z) / 0.12),
+  );
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    if (
+      density(
+        a.x + (b.x - a.x) * t,
+        ay + (by - ay) * t,
+        a.z + (b.z - a.z) * t,
+      ) >= 0
+    )
+      return false;
+  }
+  return true;
+}
+
+export function encounterPreference(a, b) {
+  const familiarity = Math.min(
+    3,
+    a.bonds?.find((bond) => bond.id === b.id)?.meetings ?? 0,
+  );
+  return familiarity * 0.35 - Math.hypot(a.x - b.x, a.z - b.z);
+}
+
+export function updateWorkerEncounters(state, dt, canMeet = () => true) {
   const workers = state.npcs;
   for (const n of workers)
     n.socialCooldown = Math.max(0, (n.socialCooldown ?? 20 + n.id * 0.7) - dt);
@@ -42,7 +71,8 @@ export function updateWorkerEncounters(state, dt) {
       b.encounterPartner !== a.id ||
       !available(a, state.time) ||
       !available(b, state.time) ||
-      !near(a, b)
+      !near(a, b) ||
+      !canMeet(a, b)
     ) {
       finish(a, b?.encounterPartner === a.id ? b : null, state.day, false);
       continue;
@@ -60,17 +90,24 @@ export function updateWorkerEncounters(state, dt) {
       a.encounterRemaining > 0
     )
       continue;
-    const b = workers.find(
-      (n) =>
-        n.id !== a.id &&
-        available(n, state.time) &&
-        n.socialCooldown === 0 &&
-        !(n.encounterRemaining > 0) &&
-        near(a, n) &&
-        !a.bonds?.some(
-          (bond) => bond.id === n.id && bond.lastDay === state.day,
-        ),
-    );
+    const b = workers
+      .filter(
+        (n) =>
+          n.id !== a.id &&
+          available(n, state.time) &&
+          n.socialCooldown === 0 &&
+          !(n.encounterRemaining > 0) &&
+          near(a, n) &&
+          canMeet(a, n) &&
+          !a.bonds?.some(
+            (bond) => bond.id === n.id && bond.lastDay === state.day,
+          ),
+      )
+      .sort(
+        (left, right) =>
+          encounterPreference(a, right) - encounterPreference(a, left) ||
+          left.id - right.id,
+      )[0];
     if (!b) continue;
     for (const [worker, other] of [
       [a, b],
