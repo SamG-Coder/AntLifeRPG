@@ -10,6 +10,7 @@ import { scentRoute } from "./navigation.js";
 import { AntSenses } from "./senses.js";
 import { Presentation } from "./presentation.js";
 import { updateDaylight } from "./daylight.js";
+import { activityLabel } from "./daily-life.js";
 import {
   sites,
   tick,
@@ -275,6 +276,16 @@ function journal() {
     $("journal").close();
     return;
   }
+  const roster = $("colony-roster");
+  roster.replaceChildren();
+  const reserve = document.createElement("p");
+  reserve.textContent = `Colony food: ${state.colony.food} portions · ${state.npcs.length} familiar workers`;
+  roster.append(reserve);
+  for (const n of state.npcs) {
+    const row = document.createElement("p");
+    row.textContent = `${n.name} · ${n.role} · ${activityLabel(n)} · energy ${Math.round(n.energy)} · nourishment ${Math.round(n.hunger ?? 85)}`;
+    roster.append(row);
+  }
   $("memories").textContent =
     state.npcs
       .filter((n) => n.memories.length)
@@ -335,6 +346,13 @@ graphics.onchange = () => {
 };
 graphicsLabel.append(graphics);
 $("journal").append(graphicsLabel);
+const rosterDetails = document.createElement("details");
+const rosterTitle = document.createElement("summary");
+rosterTitle.textContent = "Colony lives";
+const rosterContent = document.createElement("div");
+rosterContent.id = "colony-roster";
+rosterDetails.append(rosterTitle, rosterContent);
+$("journal").append(rosterDetails);
 if (import.meta.env.DEV) {
   const capture = document.createElement("button");
   capture.id = "capture-button";

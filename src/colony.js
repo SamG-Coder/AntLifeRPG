@@ -1,4 +1,5 @@
 import { scentRoute } from "./navigation.js";
+import { updateNeeds, breakReason, onDuty } from "./daily-life.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -50,7 +51,22 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       n.wait = n.id * 0.3;
       go(n, n.role === "forager" ? "surface" : "dig");
     }
-    n.energy = Math.max(0, Math.min(100, n.energy - dt * 0.007));
+    updateNeeds(n, dt);
+    n.breakReason = breakReason(n, state.time);
+    // An empty store must not strand every hungry forager in a food deadlock.
+    if (
+      n.breakReason === "meal" &&
+      state.colony.food === 0 &&
+      n.role === "forager" &&
+      onDuty(n, state.time) &&
+      !n.recovering
+    )
+      n.breakReason = null;
+    // Finish an owned delivery before leaving work; uncut cells can be released.
+    if (!n.cargo && n.breakReason && n.task !== "off-duty") {
+      restAwayFromWork(n);
+      n.wait = 0;
+    }
     if (n.wait > 0) {
       n.wait -= dt;
       continue;
@@ -95,7 +111,18 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       continue;
     }
     if (n.task === "off-duty") {
-      n.energy = Math.min(100, n.energy + dt * 0.15);
+      if (
+        n.hunger < 35 &&
+        state.colony.food > 0 &&
+        distance(n, sites.store) < 5
+      ) {
+        state.colony.food--;
+        n.hunger = Math.min(100, n.hunger + 55);
+        n.meals = (n.meals ?? 0) + 1;
+        n.lastMealDay = state.day;
+        n.breakReason = breakReason(n, state.time);
+      }
+      if (n.breakReason) continue;
       const looseLoad = state.items.some(
         (i) =>
           i.kind === "soil" &&
