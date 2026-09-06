@@ -1,5 +1,8 @@
 import * as T from "three/webgpu";
-import { height, field, caveDensity } from "./world.js";
+import { height, caveDensity } from "./world.js";
+import { clipToFreeSpace } from "./contact.js";
+const cameraDensity = (x, y, z) =>
+  Math.max(caveDensity(x, y, z), height(x, z) - y);
 export class CameraRig {
   constructor(camera, canvas) {
     this.camera = camera;
@@ -46,7 +49,13 @@ export class CameraRig {
     if (this.first) {
       desired = target.clone().addScaledVector(forward, 0.69);
       desired.y += 0.04;
-      this.camera.position.lerp(desired, 1 - Math.exp(-dt * 18));
+      desired = clipToFreeSpace(cameraDensity, target, desired);
+      const smoothed = this.camera.position
+        .clone()
+        .lerp(desired, 1 - Math.exp(-dt * 18));
+      this.camera.position.copy(
+        clipToFreeSpace(cameraDensity, target, smoothed),
+      );
       this.camera.lookAt(
         desired
           .clone()
@@ -54,15 +63,7 @@ export class CameraRig {
           .add(new T.Vector3(0, -Math.sin(this.pitch) * 3, 0)),
       );
     } else {
-      let d = this.distance;
-      while (
-        d > 1.15 &&
-        field(
-          target.x + Math.sin(this.yaw) * d,
-          target.z + Math.cos(this.yaw) * d,
-        ) > -0.2
-      )
-        d -= 0.15;
+      const d = this.distance;
       desired = target
         .clone()
         .add(
@@ -72,23 +73,13 @@ export class CameraRig {
             Math.cos(this.yaw) * d,
           ),
         );
-      for (let t = 0.05; t <= 1; t += 0.025) {
-        const probe = target.clone().lerp(desired, t);
-        if (caveDensity(probe.x, probe.y, probe.z) > -0.3) {
-          desired = target.clone().lerp(desired, Math.max(0.1, t - 0.05));
-          break;
-        }
-      }
-      desired.y = Math.max(desired.y, height(desired.x, desired.z) + 0.32);
-      if (
-        caveDensity(
-          this.camera.position.x,
-          this.camera.position.y,
-          this.camera.position.z,
-        ) > -0.1
-      )
-        this.camera.position.copy(desired);
-      else this.camera.position.lerp(desired, 1 - Math.exp(-dt * 8));
+      desired = clipToFreeSpace(cameraDensity, target, desired);
+      const smoothed = this.camera.position
+        .clone()
+        .lerp(desired, 1 - Math.exp(-dt * 8));
+      this.camera.position.copy(
+        clipToFreeSpace(cameraDensity, target, smoothed),
+      );
       this.camera.lookAt(target.clone().addScaledVector(forward, 0.7));
     }
   }

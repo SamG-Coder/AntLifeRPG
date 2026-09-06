@@ -97,3 +97,11 @@ Workers settled at a sleeping spot during sleep/fatigue breaks now blend into a 
 The browser playtest walked home, used the player rest interaction to advance two hours, and returned to the moss chamber. At about 09:00 the roster showed four underground workers between shifts; rendered telemetry independently showed four workers above 80% resting blend. Visually inspected feet and lowered workers beside alert workers, with no captured warnings/errors. Saved the actual canvas frame as resting-posture.png. This is a modest lowered pose, not a curled-leg sleep cycle, species-accurate sleep model or leaf-contact solver. A specifically sleeping worker's greeting transition still needs isolated close-up inspection.
 
 All 26 existing tests and lint pass. Production build succeeds. No implementation-mirroring unit test was added for the small visual blend; browser inspection provides the relevant evidence.
+
+## General surface contacts and camera integration
+
+Started the contact foundation needed for climbing: bounded projection onto implicit surfaces, normals pointing into free space, and heading transport through changing normals. Tests cover floors, walls, ceilings, a nonlinear sphere density, unreachable/flat fields, and a continuous floor-to-ceiling normal turn. This is not yet connected to ant movement; it must not be advertised as playable climbing.
+
+Both camera modes now use the shared contact field for floor/cave clearance. Segment sampling catches intervening walls even when both endpoints are free, and collision is checked again after smoothing. This replaces the third-person-only horizontal clipping loop and extends clearance checks to first person. Samples are at most 0.08 units apart; thinner features need a smaller step, and the field threshold is not an exact world-space sphere clearance for arbitrary densities. Props and NPC bodies are not yet in this field.
+
+The real-browser chamber inspection exercised orbiting toward the ceiling and switching to first person. Both rendered without captured warnings/errors. Close NPC geometry still intrudes in first person, confirming the separate body-contact gap. All 30 tests pass. Next climbing work must connect contact normals to a surface motor, body orientation, per-foot contacts, save state and camera orientation before calling the feature usable.
