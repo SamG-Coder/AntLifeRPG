@@ -7,6 +7,7 @@ import { recordNurseryCompletion, validNurseryCompletion } from "./duties.js";
 import { advanceFoodSupply, validFoodSupply } from "./food-supply.js";
 import { nutrition } from "./nutrition.js";
 import { validBedding } from "./bedding.js";
+import { advanceNurseryLining, validNurseryLining } from "./nursery-lining.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -101,6 +102,7 @@ export function tick(state, dt, { canMeet, canWalk } = {}) {
   advancePlayerGreetings(state, dt, canMeet);
   updateColony(state, dt, { sites, distance, excavate, canMeet, canWalk });
   recordNurseryCompletion(state);
+  advanceNurseryLining(state);
 }
 export function excavate(state, cell, position) {
   if (state.removed.includes(cell)) return null;
@@ -156,6 +158,8 @@ export function pickup(state, item, canReach = () => true) {
   return true;
 }
 export function deliveryDestination(item, position) {
+  if (item?.kind === "leaf" && item.nurserySlot !== undefined)
+    return distance(position, sites.dig) < 4 ? "dig" : null;
   if (item?.kind === "leaf" && distance(position, sites.home) < 4.5)
     return "home";
   if (item?.kind === "soil" && distance(position, sites.spoil) < 3)
@@ -174,6 +178,13 @@ export function deposit(state, position, canPlace = () => true) {
   state.player.carrying = null;
   const destination = deliveryDestination(item, position);
   if (item.kind === "leaf") item.homePlaced = destination === "home";
+  if (destination === "dig") {
+    item.deposited = true;
+    item.deliveredBy = "player";
+    for (const n of state.npcs.filter((n) => distance(n, position) < 8))
+      remember(state, n, "shared-work");
+    advanceNurseryLining(state);
+  }
   if (destination === "spoil") {
     item.deposited = true;
     state.player.deliveries++;
@@ -265,6 +276,7 @@ export function validateState(state) {
     validNurseryCompletion(state) &&
     validFoodSupply(state) &&
     validBedding(state) &&
+    validNurseryLining(state) &&
     new Set(state.items.map((i) => i.id)).size === state.items.length &&
     Number.isInteger(state.nextItem) &&
     state.items.every((i) => i.id < state.nextItem) &&

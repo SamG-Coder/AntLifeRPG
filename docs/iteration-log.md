@@ -389,3 +389,15 @@ All 100 tests, lint and build pass. New regressions compare resting with equival
 Live browser playtesting at home showed nourishment changing from about 66.18 to 62.28 across rest and the intervening observation time, without the former extra eight-point charge. Attempting rest while holding the leaf scrap displayed the put-down instruction and retained the leaf. The leaf was then placed back in the chamber. No runtime errors were observed.
 
 Rest remains an immediate time skip with full energy recovery, rather than a sleep animation or a bed-quality system. Quarter-second simulation steps improve consistency but do not add continuous rigid-body physics or solve the broader collision limitations.
+
+## Leaf lining after nursery excavation
+
+Clearing the nursery now starts a saved six-leaf lining project. Dedicated scraps appear in the root garden once, including when an older completed-excavation save resumes. Carriers gather these actual items through terrain-aware parcel routes, carry them in their mandibles, and lay them at six nursery positions. Player gathering and delivery use the same item identities, with a dedicated duty, destination-aware prompt, and distinct player/crew contribution counts. Personal bedding remains separate from these communal materials.
+
+The placed leaves remain visible and cannot be picked up and credited again. Project validation checks six unique slots, completion dates, delivered identities, and placement inside the chamber. Field notes retain progress and contribution counts after the work is finished.
+
+All 103 tests, lint and build pass. Regressions cover one-time migration, personal-bedding separation, correct player delivery and no duplicate credit, and an actual excavation-to-lining run with a mid-haul save/reload. The 20-day food regression still passes; its item bound increases by exactly six persistent nursery leaves.
+
+Live browser playtesting resumed a cleared day-4 colony, gathered a nursery leaf alongside working carriers, and delivered it to the chamber. The crew laid the remaining five. After autosave and reload, field notes retained all six leaves with one player and five crew contributions. No runtime warnings/errors were captured; inspected scenes ran near 60 FPS.
+
+This is chamber preparation, not brood simulation: eggs, nursing, growth, and colony population changes are still absent. The six leaves are supplied when the project starts rather than collected from a simulated plant. Placement is static rather than deformable or stacked physics. Crowded gathering exposed body/leg overlap, and a carrier's final approach was delayed while the player occupied its placement area; moving aside allowed completion. Those broader crowd and physical-contact limitations remain.

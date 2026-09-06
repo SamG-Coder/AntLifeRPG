@@ -17,17 +17,21 @@ export function prepareLoadDrop(state, canPlace = () => true) {
     blocked,
     text: blocked
       ? "E · No clear space for your load — turn or move away"
-      : destination === "home"
-        ? "E · Lay out your leaf bedding"
-        : destination === "spoil"
-          ? "E · Deposit soil in the spoil bed"
-          : destination === "store"
-            ? "E · Deliver seed to the store"
-            : "E · Put down your load",
+      : destination === "dig"
+        ? "E · Lay leaf lining in the nursery"
+        : destination === "home"
+          ? "E · Lay out your leaf bedding"
+          : destination === "spoil"
+            ? "E · Deposit soil in the spoil bed"
+            : destination === "store"
+              ? "E · Deliver seed to the store"
+              : "E · Put down your load",
   };
 }
 
 export function loadDropMessage(item) {
+  if (item.nurserySlot !== undefined && item.deposited)
+    return "A softer nursery floor. Your leaf stays here as part of the chamber lining.";
   if (item.homePlaced)
     return "A leaf scrap of your own. Lift it again whenever you want to rearrange your chamber.";
   if (!item.deposited) return "You set down your load.";

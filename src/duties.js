@@ -1,3 +1,4 @@
+import { nurseryLiningProgress, nurseryLeafCount } from "./nursery-lining.js";
 const nurseryCells = [];
 for (let x = 0; x < 7; x++)
   for (let y = 0; y < 5; y++)
@@ -36,6 +37,14 @@ export function recordNurseryCompletion(state) {
 
 export function currentDuty(state) {
   const carried = state.items.find((i) => i.id === state.player.carrying);
+  if (carried?.nurserySlot !== undefined)
+    return {
+      id: "deliver",
+      title: "Line the new nursery",
+      text: "Carry this leaf scrap to the cleared nursery and press E to lay it down.",
+      destination: "dig",
+      progress: "Nursery lining held in your mandibles.",
+    };
   if (carried)
     return {
       id: "deliver",
@@ -96,6 +105,18 @@ export function currentDuty(state) {
             : "The face is open. Lift loose soil with E and carry it to the spoil bed.",
       destination: "dig",
       progress: `${p.loose} soil loads remain · ${p.falling} falling`,
+    };
+  const lining = nurseryLiningProgress(state);
+  if (state.nurseryLining && lining.placed < nurseryLeafCount)
+    return {
+      id: "line-nursery",
+      title: "A softer nursery floor",
+      text: lining.available
+        ? "Gather a nursery leaf from the root garden, carry it into the cleared chamber and press E to lay it down."
+        : "The crew is carrying the remaining leaves. Visit the nursery to watch the lining take shape.",
+      destination: lining.available ? "surface" : "dig",
+      itemKind: lining.available ? "nursery-leaf" : null,
+      progress: `${lining.placed} / ${nurseryLeafCount} leaves laid · ${lining.player} by you · ${lining.crew} by the crew`,
     };
   const seeds = state.items.filter(
     (i) => i.kind === "seed" && !i.deposited && i.owner == null,

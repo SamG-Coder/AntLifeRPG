@@ -31,6 +31,7 @@ import { AntSenses } from "./senses.js";
 import { Presentation } from "./presentation.js";
 import { updateDaylight } from "./daylight.js";
 import { activityLabel } from "./daily-life.js";
+import { nurseryLiningProgress } from "./nursery-lining.js";
 import {
   sites,
   tick,
@@ -247,7 +248,7 @@ function nearby() {
     return {
       kind: "item",
       item,
-      text: `E · Lift ${item.kind === "leaf" ? "the leaf scrap" : item.kind === "seed" ? "a fallen seed" : "the loosened soil"}`,
+      text: `E · Lift ${item.nurserySlot !== undefined ? "the nursery leaf" : item.kind === "leaf" ? "the leaf scrap" : item.kind === "seed" ? "a fallen seed" : "the loosened soil"}`,
     };
   if (distance(p, sites.store) < 2.5)
     return { kind: "eat", text: "E · Eat from the communal store" };
@@ -294,11 +295,13 @@ function interact() {
     route = [];
     if (!pickup(state, n.item, canReachItem)) return;
     toast(
-      n.item.kind === "leaf"
-        ? "Leaf bedding for your chamber. Carry it home and lay it where you like."
-        : n.item.kind === "soil"
-          ? "The clump grips between your mandibles. Carry it to the spoil bed."
-          : "A seed for the colony. Carry it to the communal store.",
+      n.item.nurserySlot !== undefined
+        ? "Leaf lining for the new nursery. Carry it into the cleared chamber and press E to lay it down."
+        : n.item.kind === "leaf"
+          ? "Leaf bedding for your chamber. Carry it home and lay it where you like."
+          : n.item.kind === "soil"
+            ? "The clump grips between your mandibles. Carry it to the spoil bed."
+            : "A seed for the colony. Carry it to the communal store.",
     );
   } else if (n.kind === "eat") {
     if (state.colony && state.colony.food <= 0) {
@@ -476,6 +479,11 @@ function journal() {
   $("colony-progress").textContent = completed
     ? `Nursery cleared on day ${completed.day}. You delivered ${completed.playerLoads} soil loads; the crew delivered ${completed.crewLoads}. ${currentDuty(state).text}`
     : currentDuty(state).text;
+  if (state.nurseryLining) {
+    const lining = nurseryLiningProgress(state);
+    $("colony-progress").textContent +=
+      ` Nursery lining: ${lining.placed} / 6 leaves laid (${lining.player} by you, ${lining.crew} by the crew).`;
+  }
   keys.clear();
 }
 $("close").onclick = () => $("journal").close();
@@ -492,7 +500,7 @@ function followScent(key, kind = null) {
   toast(
     kind
       ? routeLoad
-        ? `You follow the scent of an available ${kind === "leaf" ? "leaf scrap" : kind === "seed" ? "seed" : "soil load"}. WASD to leave the trail.`
+        ? `You follow the scent of an available ${kind === "nursery-leaf" ? "nursery leaf" : kind === "leaf" ? "leaf scrap" : kind === "seed" ? "seed" : "soil load"}. WASD to leave the trail.`
         : "No available load has a clear ground route. The crew may be carrying the remaining parcels."
       : `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
   );
@@ -501,7 +509,8 @@ $("duty-route").onclick = () => {
   const duty = currentDuty(state);
   followScent(
     duty.destination,
-    duty.id === "forage" ? "seed" : duty.id === "clear" ? "soil" : null,
+    duty.itemKind ??
+      (duty.id === "forage" ? "seed" : duty.id === "clear" ? "soil" : null),
   );
 };
 for (const [key, site] of Object.entries(sites)) {
@@ -697,6 +706,7 @@ renderer.setAnimationLoop(() => {
   elapsed += dt;
   if (started && !$("journal").open) {
     const nurseryWasCleared = !!state.nurseryCleared;
+    const nurseryWasLined = !!state.nurseryLining?.completedDay;
     const previousArrivals = state.foodSupply?.arrivals ?? 0;
     const groomingBouts = state.player.groomingBouts ?? 0;
     tick(state, dt, {
@@ -705,7 +715,11 @@ renderer.setAnimationLoop(() => {
         clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });
     if (!nurseryWasCleared && state.nurseryCleared)
-      toast("The nursery floor is clear. The colony has room to grow.");
+      toast(
+        "The nursery floor is clear. Leaf lining is ready to gather in the root garden.",
+      );
+    if (!nurseryWasLined && state.nurseryLining?.completedDay)
+      toast("Six leaves laid. The new nursery has a soft lining.");
     if ((state.foodSupply?.arrivals ?? 0) > previousArrivals)
       toast("Fresh seeds in the root garden. The morning gathering can begin.");
     if ((state.player.groomingBouts ?? 0) > groomingBouts)
@@ -956,6 +970,7 @@ renderer.setAnimationLoop(() => {
       items: state.items.length,
       carrying: state.player.carrying,
       colony: state.colony,
+      nurseryLining: nurseryLiningProgress(state),
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
       grooming: {

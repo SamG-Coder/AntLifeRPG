@@ -7,6 +7,8 @@ import { nurseryWaitingPlace, reserveExcavationCell } from "./work-layout.js";
 import { workerStep } from "./worker-steering.js";
 import { reservedSeeds } from "./food-supply.js";
 import { nutrition } from "./nutrition.js";
+import { nurseryLeafPlace } from "./nursery-lining.js";
+import { itemScentRoute } from "./item-route.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -61,7 +63,11 @@ export function hasWorkerJob(state, worker) {
   return worker.role === "forager"
     ? available.filter((item) => item.kind === "seed").length >
         reservedSeeds(state)
-    : available.some((item) => item.kind === "soil") || hasDigWork(state);
+    : available.some(
+        (item) =>
+          item.kind === "soil" ||
+          (worker.role === "carrier" && item.nurserySlot !== undefined),
+      ) || hasDigWork(state);
 }
 
 /** NPC cargo refers to the same persistent item table used by the player. */
@@ -166,6 +172,21 @@ export function updateColony(
     }
     if (n.cargo) {
       const item = state.items.find((i) => i.id === n.cargo);
+      if (item?.nurserySlot !== undefined) {
+        const place = nurseryLeafPlace(item.nurserySlot);
+        if (distance(n, place) < 0.5) {
+          Object.assign(item, place, {
+            deposited: true,
+            supportOffset: 0,
+            owner: null,
+            deliveredBy: n.id,
+          });
+          n.cargo = null;
+          n.task = "rest";
+          n.wait = 4;
+        } else go(n, "dig", place);
+        continue;
+      }
       const destination = item?.kind === "seed" ? "store" : "spoil";
       if (item && distance(n, sites[destination]) < 2) {
         item.x = n.x + ((n.id % 3) - 1) * 0.18;
@@ -208,6 +229,39 @@ export function updateColony(
         advanceGrooming(n, dt);
       }
       continue;
+    }
+    if (n.role === "carrier" && state.nurseryLining) {
+      const leaf = state.items
+        .filter(
+          (i) =>
+            i.nurserySlot !== undefined &&
+            !i.deposited &&
+            i.owner == null &&
+            i.id !== state.player.carrying,
+        )
+        .sort((a, b) => distance(n, a) - distance(n, b))[0];
+      if (leaf) {
+        if (distance(n, leaf) > 1) {
+          const trail = itemScentRoute(
+            state,
+            "nursery-leaf",
+            canWalk ?? (() => true),
+            n,
+          );
+          if (!trail) {
+            restAwayFromWork(n);
+            continue;
+          }
+          n.path = trail.route;
+          n.task = "gather-lining";
+        } else {
+          leaf.owner = n.id;
+          n.cargo = leaf.id;
+          n.task = "carry-lining";
+          go(n, "dig", nurseryLeafPlace(leaf.nurserySlot));
+        }
+        continue;
+      }
     }
     if (n.role === "forager") {
       // Leave a few unclaimed seeds so a new player can learn gathering.

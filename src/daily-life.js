@@ -53,6 +53,8 @@ export function activityLabel(worker) {
   return (
     {
       carry: "Hauling a load",
+      "gather-lining": "Gathering nursery leaves",
+      "carry-lining": "Carrying leaf lining to the nursery",
       loosen: "Loosening soil",
       excavate: "Excavating",
       forage: "Gathering seeds",

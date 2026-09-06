@@ -38,7 +38,7 @@ test("twenty colony days fund worker and modeled player meals without starvation
       playerMeals -
       s.npcs.reduce((sum, n) => sum + (n.meals ?? 0), 0),
   );
-  assert.ok(s.items.length <= 148);
+  assert.ok(s.items.length <= 154); // 105 soil, six nursery leaves, 24 archived-display seeds and 19 loose seeds.
   assert.ok(validateState(s));
 });
 

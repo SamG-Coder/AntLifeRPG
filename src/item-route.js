@@ -3,7 +3,10 @@ import { sites, distance } from "./simulation.js";
 export function collectableItem(state, item, kind) {
   return (
     !!item &&
-    item.kind === kind &&
+    (kind === "nursery-leaf"
+      ? item.kind === "leaf" && item.nurserySlot !== undefined
+      : item.kind === kind &&
+        (kind !== "leaf" || item.nurserySlot === undefined)) &&
     !item.deposited &&
     !item.homePlaced &&
     item.owner == null &&
@@ -23,8 +26,8 @@ function clearGround(a, b, canWalk) {
 
 // Search the small chamber graph, then attach each available parcel to it.
 // Parcel ownership stays with the simulation; following a scent is no reservation.
-export function itemScentRoute(state, kind, canWalk) {
-  const nodes = [state.player, ...Object.values(sites)];
+export function itemScentRoute(state, kind, canWalk, origin = state.player) {
+  const nodes = [origin, ...Object.values(sites)];
   const costs = nodes.map(() => Infinity),
     paths = nodes.map(() => []);
   const visited = new Set();
