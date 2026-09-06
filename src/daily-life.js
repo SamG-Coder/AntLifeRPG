@@ -57,6 +57,7 @@ export function activityLabel(worker) {
       forage: "Gathering seeds",
       collect: "Collecting soil",
       "await-load": "Waiting for a load",
+      "await-face": "Waiting for space at the earth face",
       commute: "Travelling to work",
       rest: "Pausing after delivery",
     }[worker.task] ?? "Waking"

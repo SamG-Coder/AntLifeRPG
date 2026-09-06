@@ -3,6 +3,7 @@ import { updateNeeds, breakReason, onDuty } from "./daily-life.js";
 import { restingPlace } from "./colony-layout.js";
 import { startGrooming, advanceGrooming } from "./grooming.js";
 import { updateWorkerEncounters } from "./colony-social.js";
+import { nurseryWaitingPlace, reserveExcavationCell } from "./work-layout.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -11,6 +12,7 @@ export function soilCellPosition(id) {
 
 function go(n, destination, position) {
   n.path = scentRoute(n, destination);
+  if (destination === "dig") n.path[n.path.length - 1] = nurseryWaitingPlace(n);
   if (["home", "store", "spoil"].includes(destination) && n.path.length) {
     const end = n.path.at(-1),
       angle = n.id * 2.39996;
@@ -75,6 +77,18 @@ export function updateColony(
       go(n, n.role === "forager" ? "surface" : "dig");
     }
     updateNeeds(n, dt);
+    const oldApproach = n.path?.at(-1);
+    if (
+      n.destination === "dig" &&
+      oldApproach?.x === -14 &&
+      oldApproach?.z === -27
+    )
+      n.path[n.path.length - 1] = nurseryWaitingPlace(n);
+    if (n.cell && state.removed.includes(n.cell)) {
+      n.cell = null;
+      n.path = [];
+      n.task = "await-face";
+    }
     if (n.encounterRemaining > 0) continue;
     if (n.greetingRemaining > 0) {
       n.groomRemaining = 0;
@@ -229,24 +243,20 @@ export function updateColony(
       }
       n.wait = 3;
       n.task = "await-load";
+      const waiting = nurseryWaitingPlace(n);
+      if (distance(n, waiting) > 0.3) n.path = [waiting];
       continue;
     }
     if (n.task !== "excavate") {
-      // The crew begins at the left edge, leaving the central face to the player.
-      let cell = null;
-      for (let iz = 0; iz < 3 && !cell; iz++)
-        for (let iy = 0; iy < 2 && !cell; iy++)
-          for (let ix = 0; ix < 7 && !cell; ix++) {
-            const id = `${ix}:${iy}:${iz}`;
-            if (
-              !state.removed.includes(id) &&
-              !state.npcs.some((other) => other.cell === id)
-            ) {
-              cell = id;
-            }
-          }
+      const cell = reserveExcavationCell(state, n);
       if (!cell) {
-        restAwayFromWork(n);
+        if (!hasDigWork(state)) restAwayFromWork(n);
+        else {
+          n.task = "await-face";
+          const place = nurseryWaitingPlace(n);
+          if (distance(n, place) > 0.3) n.path = [place];
+          n.wait = 2;
+        }
         continue;
       }
       n.cell = cell;

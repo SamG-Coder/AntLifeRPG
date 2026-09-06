@@ -13,6 +13,7 @@ import { CameraRig } from "./camera.js";
 import { stanceSupport } from "./support.js";
 import { startGrooming } from "./grooming.js";
 import { clearScentPath } from "./colony-social.js";
+import { separateWorkersFromPlayer } from "./player-separation.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
@@ -593,18 +594,7 @@ renderer.setAnimationLoop(() => {
     });
     if ((state.player.groomingBouts ?? 0) > groomingBouts)
       toast("Antennae clean. Ready for the next part of your day.");
-    for (const n of state.npcs) {
-      const d = distance(n, state.player);
-      if (!surfaceFrame && d < 1.15 && d > 0.001) {
-        const force = Math.min(0.06, (1.15 - d) * dt * 4),
-          x = n.x + ((n.x - state.player.x) / d) * force,
-          z = n.z + ((n.z - state.player.z) / d) * force;
-        if (walkable(x, z)) {
-          n.x = x;
-          n.z = z;
-        }
-      }
-    }
+    separateWorkersFromPlayer(state.npcs, state.player, dt, walkable);
     if (world.digCells.size !== 105 - state.removed.length) {
       for (const id of state.removed) world.digCells.delete(id);
       world.rebuildExcavation();
