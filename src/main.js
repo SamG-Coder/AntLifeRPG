@@ -19,6 +19,7 @@ import { nutrition } from "./nutrition.js";
 import { gardenCapacity } from "./food-supply.js";
 import { ensureBedding, beddingCount } from "./bedding.js";
 import { leafScrapGeometry } from "./leaf-scrap.js";
+import { applyItemAppearance } from "./item-appearance.js";
 import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
@@ -152,9 +153,21 @@ const presentation = new Presentation(
 );
 const itemMeshes = new Map();
 const leafGeo = leafScrapGeometry();
-const cargoGeometry = player.cargo.geometry,
-  cargoMaterial = player.cargo.material;
 const soilGeo = new T.IcosahedronGeometry(0.27, 1);
+const itemAppearances = {
+  leaf: { geometry: leafGeo, material: world.leafMat, scale: [1, 1, 1] },
+  seed: {
+    geometry: world.seedGeo,
+    material: world.seedMat,
+    scale: [1, 0.8, 1.8],
+  },
+  soil: { geometry: soilGeo, material: world.soil, scale: [1, 1, 1] },
+};
+for (const ant of [player, ...ants]) {
+  ant.cargo.geometry.dispose();
+  ant.cargo.material.dispose();
+  applyItemAppearance(ant.cargo, "soil", itemAppearances);
+}
 function syncItems() {
   const liveIds = new Set(state.items.map((item) => item.id));
   for (const [id, mesh] of itemMeshes) {
@@ -166,21 +179,11 @@ function syncItems() {
   for (const item of state.items) {
     let m = itemMeshes.get(item.id);
     if (!m) {
-      m = new T.Mesh(
-        item.kind === "leaf"
-          ? leafGeo
-          : item.kind === "seed"
-            ? world.seedGeo
-            : soilGeo,
-        item.kind === "leaf"
-          ? world.leafMat
-          : item.kind === "seed"
-            ? world.seedMat
-            : world.soil,
-      );
+      const appearance = itemAppearances[item.kind];
+      m = new T.Mesh(appearance.geometry, appearance.material);
+      applyItemAppearance(m, item.kind, itemAppearances);
       m.castShadow = true;
       m.receiveShadow = true;
-      if (item.kind === "seed") m.scale.set(1, 0.8, 1.8);
       scene.add(m);
       itemMeshes.set(item.id, m);
     }
@@ -750,10 +753,9 @@ renderer.setAnimationLoop(() => {
     }
     if (elapsed - lastSave > 20) persist();
   }
-  const carryingLeaf =
-    state.items.find((i) => i.id === state.player.carrying)?.kind === "leaf";
-  player.cargo.geometry = carryingLeaf ? leafGeo : cargoGeometry;
-  player.cargo.material = carryingLeaf ? world.leafMat : cargoMaterial;
+  const carriedItem = state.items.find((i) => i.id === state.player.carrying);
+  if (carriedItem)
+    applyItemAppearance(player.cargo, carriedItem.kind, itemAppearances);
   player.update(
     state.player.x,
     state.player.z,
@@ -787,6 +789,9 @@ renderer.setAnimationLoop(() => {
       n.task === "off-duty" &&
       !n.path?.length &&
       ["sleep", "fatigue"].includes(n.breakReason);
+    const workerLoad = state.items.find((item) => item.id === n.cargo);
+    if (workerLoad)
+      applyItemAppearance(a.cargo, workerLoad.kind, itemAppearances);
     a.update(
       n.x,
       n.z,

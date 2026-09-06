@@ -323,3 +323,11 @@ The carried-leaf duty points home and explains placement/rearrangement. Field no
 All 91 tests, lint and build pass. Browser playtesting followed the leaf route, picked up a scrap, visually inspected its carried form, walked home and placed it. The prompt switched to lifting it again and field notes recorded one arranged scrap. No warnings/errors were captured; the inspected scene ran near 60 FPS. The placed scrap was largely occluded by the player in the inspected rear view, while the carried leaf was clearly visible.
 
 This is a first personal furnishing loop. It does not add a sleep bonus, furnishing editor, leaf deformation/stacking/body collision, NPC furnishing ownership or an expanded home progression system. Four scraps are provided once; replenishment and additional furnishing types remain future work.
+
+## Cargo that matches its parcel
+
+Ground items, player cargo and worker cargo now share one appearance definition per kind. Seeds retain their elongated seed geometry/material/scale while carried, soil retains its clump shape and soil material, and leaves retain their curved veined mesh. Appearance changes only when cargo kind changes. The initial per-ant placeholder cargo geometry/materials are disposed when replaced by the shared assets.
+
+All 91 existing tests, lint and build pass. Browser playtesting gathered a seed, carried it to the store, and inspected it from a side view: the pale elongated seed was visible ahead of the head instead of a generic brown clump. The initial garden view was obscured by vegetation/water, so it was not used as visual proof. No warnings/errors were captured, and the inspected store scene ran near 60 FPS. Worker cargo uses the same mapping, but a close worker pickup was not separately observed in this session.
+
+This aligns parcel appearance through carrying; it does not add mandible contact solving, load-dependent balance, cargo collision, or new seed/soil asset detail.
