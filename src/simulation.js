@@ -51,13 +51,13 @@ export function createState() {
       id: i,
       name,
       role: i % 3 === 0 ? "excavator" : i % 3 === 1 ? "forager" : "carrier",
-      x: ((i % 4) - 1.5) * 1.2,
-      z: -5 - i * 0.9,
+      x: Math.cos(i * 2.39996) * (1.8 + (i % 3) * 0.5),
+      z: (i < 12 ? 0 : -14) + Math.sin(i * 2.39996) * (1.8 + (i % 3) * 0.5),
       target: i % 4,
       energy: 100,
       trust: 0,
       memories: [],
-      cargo: i % 3 === 2 ? "seed" : null,
+      cargo: null,
     })),
     removed: [],
     items: [],
@@ -77,23 +77,7 @@ export function tick(state, dt) {
   const p = state.player;
   p.hunger = Math.max(0, p.hunger - dt * 0.024);
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
-  for (const n of state.npcs) {
-    const route =
-      n.role === "excavator"
-        ? ["store", "dig", "spoil", "dig"]
-        : ["home", "store", "surface", "store"];
-    const dest = sites[route[n.target % 4]];
-    const d = distance(n, dest);
-    if (d < 0.7) {
-      n.target = (n.target + 1) % 4;
-      if (route[n.target] === "store") n.cargo = "seed";
-      else if (route[n.target] === "surface") n.cargo = null;
-    } else {
-      const speed = (n.role === "carrier" ? 1.05 : 1.4) * dt;
-      n.x += ((dest.x - n.x) / d) * Math.min(d, speed);
-      n.z += ((dest.z - n.z) / d) * Math.min(d, speed);
-    }
-  }
+  updateColony(state, dt, { sites, distance, excavate });
 }
 export function excavate(state, cell, position) {
   if (state.removed.includes(cell)) return null;
@@ -111,7 +95,8 @@ export function excavate(state, cell, position) {
   return item;
 }
 export function pickup(state, item) {
-  if (state.player.carrying !== null || item.deposited) return false;
+  if (state.player.carrying !== null || item.deposited || item.owner != null)
+    return false;
   state.player.carrying = item.id;
   return true;
 }
@@ -161,3 +146,4 @@ export function validateState(state) {
     Number.isFinite(state.time)
   );
 }
+import { updateColony } from "./colony.js";

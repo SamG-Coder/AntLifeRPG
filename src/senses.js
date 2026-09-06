@@ -17,7 +17,7 @@ export class AntSenses {
         new T.Vector3(side * 0.1, -0.03, -0.65),
       ]);
       const feeler = new T.Mesh(
-        new T.TubeGeometry(curve, 18, 0.008, 6, false),
+        new T.TubeGeometry(curve, 18, 0.0035, 6, false),
         cuticle,
       );
       this.root.add(feeler);

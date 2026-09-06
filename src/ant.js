@@ -1,7 +1,8 @@
 import * as T from "three/webgpu";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { setSegment } from "./math.js";
+import { setSegment, solveKnee } from "./math.js";
+import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
 const shell = new T.MeshStandardMaterial({
   color: 0x3b1b0d,
@@ -21,11 +22,38 @@ export async function loadAnt() {
     if (!groups.has(key))
       groups.set(key, { material: o.material, geometries: [] });
     const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    // Authored lofts have no UV unwrap; keep material batches attribute-compatible.
+    if (!geometry.attributes.uv)
+      geometry.setAttribute(
+        "uv",
+        new T.BufferAttribute(
+          new Float32Array(geometry.attributes.position.count * 2),
+          2,
+        ),
+      );
+    for (const key of Object.keys(geometry.attributes))
+      if (!["position", "normal", "uv"].includes(key))
+        geometry.deleteAttribute(key);
     groups.get(key).geometries.push(geometry);
   });
   bodyTemplate = new T.Group();
   for (const { material, geometries } of groups.values()) {
-    const mesh = new T.Mesh(mergeGeometries(geometries), material);
+    let renderedMaterial = material;
+    if (material.name.includes("cuticle")) {
+      renderedMaterial = new T.MeshStandardNodeMaterial();
+      renderedMaterial.copy(material);
+      renderedMaterial.roughnessNode = mx_noise_float(positionLocal.mul(55))
+        .mul(0.08)
+        .add(0.43);
+      renderedMaterial.normalNode = bumpMap(
+        mx_noise_float(positionLocal.mul(vec3(140, 200, 55))),
+        0.004,
+      );
+    }
+    const merged = mergeGeometries(geometries);
+    if (!merged)
+      throw new Error(`Could not merge ant material ${material.name}`);
+    const mesh = new T.Mesh(merged, renderedMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     bodyTemplate.add(mesh);
@@ -82,6 +110,25 @@ export class Ant {
   update(x, z, yaw, dt, carrying = false) {
     this.root.position.set(x, this.height(x, z), z);
     this.root.rotation.y = yaw;
+    this.yaw = yaw;
+    const epsilon = 0.12;
+    const normal = new T.Vector3(
+      this.height(x - epsilon, z) - this.height(x + epsilon, z),
+      epsilon * 2,
+      this.height(x, z - epsilon) - this.height(x, z + epsilon),
+    ).normalize();
+    const forward = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    forward.addScaledVector(normal, -forward.dot(normal)).normalize();
+    const right = forward.clone().cross(normal).normalize();
+    const basis = new T.Matrix4().makeBasis(
+      right,
+      normal,
+      forward.clone().negate(),
+    );
+    this.root.quaternion.slerp(
+      new T.Quaternion().setFromRotationMatrix(basis),
+      Math.min(1, dt * 12),
+    );
     const travel = this.root.position.distanceTo(this.previous);
     this.phase += travel * 5.6;
     this.root.updateMatrixWorld(true);
@@ -106,22 +153,22 @@ export class Ant {
         leg.foot.lerpVectors(leg.start, leg.target, t * t * (3 - 2 * t));
         leg.foot.y += Math.sin(t * Math.PI) * 0.17;
       }
+      if (!moving)
+        leg.foot.y = T.MathUtils.lerp(
+          leg.foot.y,
+          this.height(leg.foot.x, leg.foot.z) + 0.025,
+          Math.min(1, dt * 15),
+        );
       if (leg.foot.distanceTo(ideal) > 1.4) leg.foot.copy(ideal);
       leg.swing = moving && swing;
       const hip = leg.hip.clone().applyMatrix4(this.root.matrixWorld);
       const ankle = leg.foot.clone().add(new T.Vector3(0, 0.065, 0));
-      const midpoint = hip.clone().lerp(ankle, 0.5);
-      const direction = ankle.clone().sub(hip);
       const bend = new T.Vector3(
         leg.side * Math.cos(yaw),
         0.9,
         -leg.side * Math.sin(yaw),
       ).normalize();
-      const length = 0.57;
-      const offset = Math.sqrt(
-        Math.max(0.02, length * length - direction.lengthSq() / 4),
-      );
-      const knee = midpoint.addScaledVector(bend, offset);
+      const knee = solveKnee(hip, ankle, bend);
       setSegment(leg.segments[0], hip, knee);
       setSegment(leg.segments[1], knee, ankle);
       setSegment(leg.segments[2], ankle, leg.foot);

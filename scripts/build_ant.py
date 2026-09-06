@@ -9,7 +9,7 @@ def material(name,color,rough,metal=0):
     m=bpy.data.materials.new(name);m.diffuse_color=(*color,1);m.use_nodes=True
     p=m.node_tree.nodes.get('Principled BSDF');p.inputs['Base Color'].default_value=(*color,1);p.inputs['Roughness'].default_value=rough;p.inputs['Metallic'].default_value=metal
     return m
-shell=material('Burnished chestnut cuticle',(0.085,0.027,0.012),.29,.12)
+shell=material('Burnished chestnut cuticle',(0.047,0.021,0.011),.43,0)
 joint=material('Amber joint membrane',(.18,.068,.019),.43)
 eye=material('Obsidian compound eyes',(.008,.009,.006),.19)
 hair=material('Fine golden setae',(.3,.2,.07),.8)
@@ -25,8 +25,18 @@ def tube(name,points,radius,mat):
     o=bpy.data.objects.new(name,c);bpy.context.collection.objects.link(o);o.data.materials.append(mat)
     return o
 # Blender Z is vertical; -Y becomes +Z in glTF. Face forward along +Y, exported -Z.
-uv('Mesosoma pronotum',(0,.12,.53),(.25,.38,.23),shell)
-uv('Mesosoma propodeum',(0,-.23,.48),(.19,.25,.18),shell)
+verts=[];faces=[]
+# A single saddle-shaped mesosoma avoids the bead-on-a-string silhouette.
+profile=[(-.45,.055,.045,.46),(-.39,.13,.12,.48),(-.25,.19,.17,.49),(-.10,.17,.14,.48),(.04,.19,.17,.50),(.18,.235,.21,.53),(.30,.23,.20,.54),(.40,.13,.12,.53),(.45,.05,.04,.51)]
+for y,rx,rz,cz in profile:
+    for i in range(32):
+        a=i/32*math.tau;verts.append((math.cos(a)*rx,y,cz+math.sin(a)*rz))
+for j in range(len(profile)-1):
+    for i in range(32):faces.append((j*32+i,j*32+(i+1)%32,(j+1)*32+(i+1)%32,(j+1)*32+i))
+faces.extend([tuple(reversed(range(32))),tuple((len(profile)-1)*32+i for i in range(32))])
+mesh=bpy.data.meshes.new('Mesosoma continuous topology');mesh.from_pydata(verts,[],faces);mesh.update();obj=bpy.data.objects.new('Mesosoma saddle',mesh);bpy.context.collection.objects.link(obj);obj.data.materials.append(shell)
+for p in mesh.polygons:p.use_smooth=True
+bpy.context.view_layer.objects.active=obj;obj.select_set(True);modifier=obj.modifiers.new('Cuticle smoothing','SUBSURF');modifier.levels=2;bpy.ops.object.modifier_apply(modifier=modifier.name);obj.select_set(False)
 uv('Petiolar node',(0,-.51,.49),(.105,.12,.19),joint)
 g=uv('Gaster',(0,-.94,.48),(.36,.52,.32),shell,48,32)
 uv('Head capsule',(0,.68,.53),(.31,.32,.26),shell,48,32)

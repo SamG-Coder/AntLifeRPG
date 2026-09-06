@@ -19,6 +19,13 @@ import {
   relationship,
 } from "./simulation.js";
 const $ = (id) => document.getElementById(id);
+addEventListener("unhandledrejection", (event) => {
+  $("status").textContent =
+    `Colony could not start: ${event.reason?.message ?? "unknown graphics error"}`;
+});
+addEventListener("error", (event) => {
+  $("status").textContent = `Runtime error: ${event.message}`;
+});
 const state = await load();
 let route = [];
 let started = false,
@@ -102,7 +109,7 @@ function syncItems() {
       scene.add(m);
       itemMeshes.set(item.id, m);
     }
-    m.visible = item.id !== state.player.carrying;
+    m.visible = item.id !== state.player.carrying && item.owner == null;
     m.position.set(
       item.x,
       height(item.x, item.z) + 0.2 + (item.deposited ? 0.08 : 0),
@@ -128,7 +135,13 @@ function nearby() {
             : "E · Put down your load",
     };
   const item = state.items
-    .filter((i) => !i.deposited && i.id !== p.carrying && distance(p, i) < 1.8)
+    .filter(
+      (i) =>
+        !i.deposited &&
+        i.owner == null &&
+        i.id !== p.carrying &&
+        distance(p, i) < 1.8,
+    )
     .sort((a, b) => distance(p, a) - distance(p, b))[0];
   if (item)
     return {
@@ -179,6 +192,11 @@ function interact() {
         : "A seed for the colony. Carry it to the communal store.",
     );
   } else if (n.kind === "eat") {
+    if (state.colony && state.colony.food <= 0) {
+      toast("The store is empty. Foragers need to bring back more seeds.");
+      return;
+    }
+    if (state.colony) state.colony.food--;
     state.player.hunger = Math.min(100, state.player.hunger + 25);
     toast("Warm seed oils. You feel nourished.");
   } else if (n.kind === "social") {
@@ -257,6 +275,14 @@ for (const [key, site] of Object.entries(sites)) {
   button.className = "scent-choice";
   button.onclick = () => {
     route = scentRoute(state.player, key);
+    if (key === "surface") {
+      const seed = state.items
+        .filter((i) => i.kind === "seed" && !i.deposited && i.owner == null)
+        .sort(
+          (a, b) => distance(a, sites.surface) - distance(b, sites.surface),
+        )[0];
+      if (seed) route.push({ x: seed.x, z: seed.z });
+    }
     $("journal").close();
     toast(
       `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
@@ -330,6 +356,22 @@ renderer.setAnimationLoop(() => {
   elapsed += dt;
   if (started && !$("journal").open) {
     tick(state, dt);
+    for (const n of state.npcs) {
+      const d = distance(n, state.player);
+      if (d < 1.15 && d > 0.001) {
+        const force = Math.min(0.06, (1.15 - d) * dt * 4),
+          x = n.x + ((n.x - state.player.x) / d) * force,
+          z = n.z + ((n.z - state.player.z) / d) * force;
+        if (walkable(x, z)) {
+          n.x = x;
+          n.z = z;
+        }
+      }
+    }
+    if (world.digCells.size !== 105 - state.removed.length) {
+      for (const id of state.removed) world.digCells.delete(id);
+      world.rebuildExcavation();
+    }
     if (keys.has("ArrowLeft")) rig.yaw += dt * 1.6;
     if (keys.has("ArrowRight")) rig.yaw -= dt * 1.6;
     if (keys.has("ArrowUp")) rig.pitch = Math.max(-0.3, rig.pitch - dt);
@@ -400,16 +442,18 @@ renderer.setAnimationLoop(() => {
   for (let i = 0; i < ants.length; i++) {
     const n = state.npcs[i],
       a = ants[i];
-    const yaw = Math.atan2(
-      -(n.x - a.root.position.x),
-      -(n.z - a.root.position.z),
-    );
+    const moving =
+      Math.hypot(n.x - a.root.position.x, n.z - a.root.position.z) > 0.0002;
+    const yaw = moving
+      ? Math.atan2(-(n.x - a.root.position.x), -(n.z - a.root.position.z))
+      : (a.yaw ?? 0);
     a.update(n.x, n.z, yaw, dt, !!n.cargo);
   }
   rig.update(state.player, dt);
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
   sun.intensity = 2.1 + Math.sin((state.time / 1440) * Math.PI) * 1.4;
   if (elapsed - lastHud > 0.2) {
+    syncItems();
     lastHud = elapsed;
     let closest = "home",
       d = Infinity;
@@ -451,13 +495,14 @@ renderer.setAnimationLoop(() => {
       `${renderer.backend.isWebGPUBackend ? "WEBGPU" : "WEBGL 2"} · ${Math.round(frameCount / frameTime)} FPS · 24 colony workers · ${lastSave ? "colony saved" : "autosave ready"}`;
     $("status").dataset.metrics = JSON.stringify({
       fps: frameCount / frameTime,
-      drawCalls: renderer.info.render.calls,
+      drawCalls: renderer.info.render.drawCalls,
       triangles: renderer.info.render.triangles,
       x: state.player.x,
       z: state.player.z,
       removed: state.removed.length,
       items: state.items.length,
       carrying: state.player.carrying,
+      colony: state.colony,
     });
     frameCount = 0;
     frameTime = 0;
@@ -476,7 +521,7 @@ window.antLife = {
   dig,
   save: persist,
   telemetry: () => ({
-    drawCalls: renderer.info.render.calls,
+    drawCalls: renderer.info.render.drawCalls,
     triangles: renderer.info.render.triangles,
     items: state.items.length,
     removed: state.removed.length,

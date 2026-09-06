@@ -14,4 +14,23 @@ The GitHub Actions workflow verifies every pull request and deploys main to Page
 
 ## Status
 
-Initial foundation under active construction. This is not the finished vertical slice or the final graphical quality target.
+The current prototype is playable at **https://samg-coder.github.io/AntLifeRPG/**.
+
+- WASD moves, Shift runs, drag looks, mouse wheel adjusts follow distance.
+- F switches first/third person. Q scrapes the excavation face; E lifts, drops, deposits, eats or greets according to proximity.
+- H opens field notes and scent routes. Following a scent moves physically through the connected tunnels; WASD cancels guidance.
+- R rests at the home leaf bed. Browser IndexedDB stores the colony every 20 seconds and when the page becomes hidden.
+
+There are 24 named workers, a home, food store, excavation face, spoil bed and surface garden. Soil removal changes actual mesh geometry and produces persistent movable items. Workers now share the same item and excavation state as the player. Initial relationships record greetings and shared work.
+
+This is an early prototype, not the finished vertical slice or the final graphical quality target. Climbing, full soil stability, mature schedules/relationships, cooperative hauling, leisure, home furnishing, quality presets and broad performance validation are still outstanding. See [the critical iteration log](docs/iteration-log.md).
+
+## Editable assets
+
+`assets/worker-ant.blend` is the source model. Rebuild it and the glTF with:
+
+```powershell
+& 'D:/Blender/blender.exe' -b -t 4 --python scripts/build_ant.py
+```
+
+The anatomical body is authored in Blender; runtime limbs use contact-driven animation in `src/ant.js`. Browser shaders add fine cuticle variation. Material and geometry quality remain under active refinement.
