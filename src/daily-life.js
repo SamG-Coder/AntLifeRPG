@@ -31,6 +31,7 @@ export function breakReason(worker, minutes) {
 }
 
 export function activityLabel(worker) {
+  if (worker.encounterRemaining > 0) return "Exchanging scents with a nestmate";
   if (worker.groomRemaining > 0) return "Grooming antennae";
   if (worker.greetingRemaining > 0) return "Exchanging scents with you";
   if (worker.task === "off-duty") {

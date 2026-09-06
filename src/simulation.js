@@ -1,6 +1,7 @@
 import { restingChambers } from "./colony-layout.js";
 import { restoreFrame } from "./surface-motor.js";
 import { advanceGrooming, validGrooming } from "./grooming.js";
+import { validWorkerBonds } from "./colony-social.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -163,6 +164,7 @@ export function validateState(state) {
       (n) =>
         n &&
         validGrooming(n) &&
+        validWorkerBonds(n, new Set(state.npcs.map((worker) => worker?.id))) &&
         Number.isInteger(n.id) &&
         typeof n.name === "string" &&
         [n.x, n.z, n.energy, n.trust].every(Number.isFinite) &&

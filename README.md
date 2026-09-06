@@ -25,6 +25,8 @@ The current prototype is playable at **https://samg-coder.github.io/AntLifeRPG/*
 
 There are 24 named workers, a home, food store, excavation face, spoil bed and surface garden. Soil removal changes actual mesh geometry and produces persistent movable items. Workers now share the same item and excavation state as the player. Initial relationships record greetings and shared work.
 
+Nearby workers occasionally pause to exchange scents. Completed encounters build persistent familiarity between those workers, shown in Colony lives. Needs and deliveries remain part of their ongoing routines.
+
 The player can traverse nest-soil walls and ceilings with an oriented camera and saved attachment state. Grip currently excludes roots, rocks and foliage; workers still follow ground routes. Tight transitions and excavation clearance need further refinement.
 
 This is an early prototype, not the finished vertical slice or the final graphical quality target. Universal climbing, full soil stability, mature schedules/relationships, cooperative hauling, leisure, home furnishing, quality presets and broad performance validation are still outstanding. See [the critical iteration log](docs/iteration-log.md).

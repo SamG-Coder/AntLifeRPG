@@ -342,6 +342,11 @@ function journal() {
   for (const n of state.npcs) {
     const row = document.createElement("p");
     row.textContent = `${n.name} · ${n.role} · ${activityLabel(n)} · energy ${Math.round(n.energy)} · nourishment ${Math.round(n.hunger ?? 85)}`;
+    if (n.bonds?.length)
+      row.textContent += ` · familiar with ${n.bonds
+        .map((b) => state.npcs.find((other) => other.id === b.id)?.name)
+        .filter(Boolean)
+        .join(", ")}`;
     roster.append(row);
   }
   $("memories").textContent =
@@ -683,8 +688,13 @@ renderer.setAnimationLoop(() => {
       a = ants[i];
     const moving =
       Math.hypot(n.x - a.root.position.x, n.z - a.root.position.z) > 0.0002;
-    const yaw =
-      n.greetingRemaining > 0
+    const partner =
+      n.encounterRemaining > 0
+        ? state.npcs.find((other) => other.id === n.encounterPartner)
+        : null;
+    const yaw = partner
+      ? Math.atan2(n.x - partner.x, n.z - partner.z)
+      : n.greetingRemaining > 0
         ? Math.atan2(n.x - state.player.x, n.z - state.player.z)
         : moving
           ? Math.atan2(-(n.x - a.root.position.x), -(n.z - a.root.position.z))
@@ -699,7 +709,7 @@ renderer.setAnimationLoop(() => {
       yaw,
       dt,
       !!n.cargo,
-      n.greetingRemaining > 0,
+      n.greetingRemaining > 0 || n.encounterRemaining > 0,
       resting,
       null,
       n.groomRemaining > 0,
@@ -767,6 +777,10 @@ renderer.setAnimationLoop(() => {
         bouts: state.player.groomingBouts ?? 0,
         workers: state.npcs.filter((n) => n.groomRemaining > 0).length,
       },
+      workerEncounters:
+        state.npcs.filter((n) => n.encounterRemaining > 0).length / 2,
+      workerBonds:
+        state.npcs.reduce((total, n) => total + (n.bonds?.length ?? 0), 0) / 2,
       feet: {
         planted: surfaceFrame
           ? stanceSupport(world.solidDensity, surfaceFrame, player.legs).count

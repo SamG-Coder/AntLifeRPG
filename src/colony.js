@@ -2,6 +2,7 @@ import { scentRoute } from "./navigation.js";
 import { updateNeeds, breakReason, onDuty } from "./daily-life.js";
 import { restingPlace } from "./colony-layout.js";
 import { startGrooming, advanceGrooming } from "./grooming.js";
+import { updateWorkerEncounters } from "./colony-social.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -43,6 +44,7 @@ function hasDigWork(state) {
 /** NPC cargo refers to the same persistent item table used by the player. */
 export function updateColony(state, dt, { sites, distance, excavate }) {
   state.colony ??= { soilDelivered: 0, seedsDelivered: 0, food: 45 };
+  updateWorkerEncounters(state, dt);
   for (const n of state.npcs) {
     if (!n.workVersion) {
       n.workVersion = 1;
@@ -52,6 +54,7 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       go(n, n.role === "forager" ? "surface" : "dig");
     }
     updateNeeds(n, dt);
+    if (n.encounterRemaining > 0) continue;
     if (n.greetingRemaining > 0) {
       n.groomRemaining = 0;
       n.greetingRemaining = Math.max(0, n.greetingRemaining - dt);
