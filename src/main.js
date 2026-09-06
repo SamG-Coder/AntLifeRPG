@@ -268,7 +268,7 @@ function nearby() {
     return {
       kind: "dig",
       text: state.nurseryLining?.completedDay
-        ? "Nursery lined · Six leaves laid by you and your nestmates"
+        ? "Nursery lined · Six leaves laid in the chamber"
         : state.nurseryCleared
           ? "Nursery floor clear · Leaf lining is the next job"
           : "Q · Scrape the earth face · E lift loose soil",
