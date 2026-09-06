@@ -277,3 +277,11 @@ The constrained full-colony check exposed that the nursery footprint excluded re
 All 78 tests pass, along with lint/build. Tests also cover opposing workers passing and reaching opposite destinations with more than 1.1 units of root-position separation, passing a stationary player inside a narrow corridor, and recovery from outside a boundary. Production preview resumed the crowded store save; the area around the stationary player cleared as workers continued to their resting chambers. The inspected scene ran near 60 FPS with no warnings/errors.
 
 This is local point-clearance steering and bounded root-position separation, not oriented body/leg collision, velocity prediction, global crowd routing, force-based motion or universal deadlock prevention. Close contact and abrupt steering can still occur in dense groups. The single browser scene does not establish broad traffic or performance guarantees.
+
+## Food handoff feedback and placement consistency
+
+Played the completed-nursery save through the duty scent to a real surface seed, pickup, return to the communal store and delivery. Food increased from 51 to 52 and player seed deliveries from zero to one, but the old confirmation incorrectly said only that the load was set down. Inspection also found that prompts used the player's position and ignored cargo type, while deposition credited the offset parcel position.
+
+Delivery classification now shares the parcel kind and actual placement between the prompt and deposition. Soil at the store and seeds at the spoil bed offer an ordinary drop. Confirmation follows the deposited item's actual state, including explicit food credit for a delivered seed. The duty count also uses singular wording when one seed remains.
+
+All 81 tests, lint and build pass. New regression cases cover offset placement inside/outside the store boundary, wrong-kind loads remaining recoverable without delivery credit, and the soil handoff. A second browser gathering trip on the updated production preview showed the seed-specific prompt, the new confirmation, food increasing from 52 to 53 and player seed deliveries increasing from one to two. The inspected frame ran near 60 FPS with no captured warnings/errors. Dropped-seed route selection remains to be checked; this change does not add food replenishment or alter cargo physics.

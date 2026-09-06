@@ -122,6 +122,13 @@ export function pickup(state, item) {
   state.player.carrying = item.id;
   return true;
 }
+export function deliveryDestination(item, position) {
+  if (item?.kind === "soil" && distance(position, sites.spoil) < 3)
+    return "spoil";
+  if (item?.kind === "seed" && distance(position, sites.store) < 3)
+    return "store";
+  return null;
+}
 export function deposit(state, position) {
   const item = state.items.find((i) => i.id === state.player.carrying);
   if (!item) return false;
@@ -129,14 +136,15 @@ export function deposit(state, position) {
   item.z = position.z;
   item.y = position.y ?? 0;
   state.player.carrying = null;
-  if (distance(position, sites.spoil) < 3 && item.kind === "soil") {
+  const destination = deliveryDestination(item, position);
+  if (destination === "spoil") {
     item.deposited = true;
     state.player.deliveries++;
     for (const n of state.npcs.filter((n) => distance(n, sites.dig) < 12)) {
       remember(state, n, "shared-work");
     }
   }
-  if (distance(position, sites.store) < 3 && item.kind === "seed") {
+  if (destination === "store") {
     item.deposited = true;
     state.player.seeds++;
     if (state.colony) state.colony.food++;

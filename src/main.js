@@ -15,6 +15,7 @@ import { startGrooming } from "./grooming.js";
 import { clearScentPath } from "./colony-social.js";
 import { separateWorkersFromPlayer } from "./player-separation.js";
 import { currentDuty } from "./duties.js";
+import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
@@ -189,12 +190,7 @@ function nearby() {
   if (p.carrying !== null)
     return {
       kind: "drop",
-      text:
-        distance(p, sites.spoil) < 3
-          ? "E · Deposit soil in the spoil bed"
-          : distance(p, sites.store) < 3
-            ? "E · Deliver to the store"
-            : "E · Put down your load",
+      ...prepareLoadDrop(state),
     };
   const item = state.items
     .filter(
@@ -237,16 +233,7 @@ function interact() {
   if (!n) return;
   audio.click();
   if (n.kind === "drop") {
-    const delivered = distance(state.player, sites.spoil) < 3;
-    deposit(state, {
-      x: state.player.x - Math.sin(state.player.yaw),
-      z: state.player.z - Math.cos(state.player.yaw),
-    });
-    toast(
-      delivered
-        ? "A little more room for the colony. Your crew notices."
-        : "You set down your load.",
-    );
+    if (deposit(state, n.position)) toast(loadDropMessage(n.item));
   } else if (n.kind === "item") {
     pickup(state, n.item);
     toast(

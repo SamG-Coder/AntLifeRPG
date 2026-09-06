@@ -94,7 +94,7 @@ export function currentDuty(state) {
       title: "Food for the next shift",
       text: "Follow the surface scent, lift a seed with E, and bring it to the store.",
       destination: "surface",
-      progress: `Nursery cleared · ${seeds.length} seeds available · ${state.player.seeds} delivered by you`,
+      progress: `Nursery cleared · ${seeds.length} ${seeds.length === 1 ? "seed" : "seeds"} available · ${state.player.seeds} delivered by you`,
     };
   return {
     id: "leisure",
