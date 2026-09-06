@@ -8,6 +8,8 @@ import { AudioSystem } from "./audio.js";
 import { load, save } from "./save.js";
 import { scentRoute } from "./navigation.js";
 import { AntSenses } from "./senses.js";
+import { Presentation } from "./presentation.js";
+import { updateDaylight } from "./daylight.js";
 import {
   sites,
   tick,
@@ -92,11 +94,23 @@ for (const [x, y, z, color, intensity] of [
 }
 const world = buildWorld(scene, state);
 await loadAnt();
-const player = new Ant(scene, state.player.x, state.player.z, height);
+const player = new Ant(
+  scene,
+  state.player.x,
+  state.player.z,
+  height,
+  state.player.yaw,
+);
 const ants = state.npcs.map((n) => new Ant(scene, n.x, n.z, height));
 const rig = new CameraRig(camera, $("world"));
 rig.yaw = state.player.yaw;
 rig.first = state.settings.firstPerson;
+const presentation = new Presentation(
+  renderer,
+  scene,
+  camera,
+  state.settings.quality ?? "balanced",
+);
 const itemMeshes = new Map();
 const soilGeo = new T.IcosahedronGeometry(0.27, 1);
 function syncItems() {
@@ -299,13 +313,35 @@ notesButton.id = "notes-button";
 notesButton.textContent = "H · Scent & field notes";
 notesButton.onclick = journal;
 $("hud").append(notesButton);
+const graphicsLabel = document.createElement("label");
+graphicsLabel.className = "graphics-setting";
+graphicsLabel.textContent = "Contact shading ";
+const graphics = document.createElement("select");
+graphics.setAttribute("aria-label", "Graphics quality");
+for (const [value, text] of [
+  ["low", "Off · fastest"],
+  ["balanced", "Balanced"],
+  ["high", "High detail"],
+]) {
+  const option = document.createElement("option");
+  option.value = value;
+  option.textContent = text;
+  graphics.append(option);
+}
+graphics.value = presentation.quality;
+graphics.onchange = () => {
+  state.settings.quality = graphics.value;
+  presentation.setQuality(graphics.value);
+};
+graphicsLabel.append(graphics);
+$("journal").append(graphicsLabel);
 if (import.meta.env.DEV) {
   const capture = document.createElement("button");
   capture.id = "capture-button";
   capture.textContent = "Save gameplay frame";
   capture.onclick = async () => {
     try {
-      renderer.render(scene, camera);
+      presentation.render();
       const pixels = renderer.domElement.toDataURL("image/png");
       const response = await fetch("/__capture", {
         method: "POST",
@@ -477,7 +513,7 @@ renderer.setAnimationLoop(() => {
   }
   rig.update(state.player, dt);
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
-  sun.intensity = 2.1 + Math.sin((state.time / 1440) * Math.PI) * 1.4;
+  updateDaylight(scene, sun, ambient, state.time);
   if (elapsed - lastHud > 0.2) {
     syncItems();
     lastHud = elapsed;
@@ -513,7 +549,7 @@ renderer.setAnimationLoop(() => {
       `${state.player.deliveries} clumps delivered · ${state.player.seeds} seeds gathered`;
     if (elapsed > toastUntil) $("toast").style.opacity = 0;
   }
-  renderer.render(scene, camera);
+  presentation.render();
   frameCount++;
   frameTime += rawDt;
   if (frameTime >= 2) {
@@ -554,3 +590,4 @@ window.antLife = {
   }),
 };
 $("status").textContent = "Colony ready";
+$("enter").disabled = false;

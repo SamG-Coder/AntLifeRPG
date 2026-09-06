@@ -19,6 +19,26 @@ function go(n, destination, position) {
   n.destination = destination;
 }
 
+function restAwayFromWork(n) {
+  const angle = n.id * 2.39996;
+  const radius = 2.2 + (n.id % 3) * 0.85;
+  go(n, "store");
+  n.path[n.path.length - 1] = {
+    x: Math.cos(angle) * radius,
+    z: -14 + Math.sin(angle) * radius,
+  };
+  n.cell = null;
+  n.task = "off-duty";
+}
+
+function hasDigWork(state) {
+  for (let iz = 0; iz < 3; iz++)
+    for (let iy = 0; iy < 2; iy++)
+      for (let ix = 0; ix < 7; ix++)
+        if (!state.removed.includes(`${ix}:${iy}:${iz}`)) return true;
+  return false;
+}
+
 /** NPC cargo refers to the same persistent item table used by the player. */
 export function updateColony(state, dt, { sites, distance, excavate }) {
   state.colony ??= { soilDelivered: 0, seedsDelivered: 0, food: 45 };
@@ -38,7 +58,8 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
     if (n.path?.length) {
       const target = n.path[0],
         d = distance(n, target);
-      if (d < 0.2) {
+      // Junctions are areas to pass through, not a point every worker must occupy.
+      if (d < (n.path.length > 1 ? 2 : 0.25)) {
         n.path.shift();
         continue;
       }
@@ -73,6 +94,28 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       } else go(n, destination);
       continue;
     }
+    if (n.task === "off-duty") {
+      n.energy = Math.min(100, n.energy + dt * 0.15);
+      const looseLoad = state.items.some(
+        (i) =>
+          i.kind === "soil" &&
+          !i.deposited &&
+          i.owner == null &&
+          i.id !== state.player.carrying,
+      );
+      const seeds = state.items.filter(
+        (i) =>
+          i.kind === "seed" &&
+          !i.deposited &&
+          i.owner == null &&
+          i.id !== state.player.carrying,
+      ).length;
+      if (n.role === "forager" ? seeds > 3 : looseLoad || hasDigWork(state)) {
+        n.task = "commute";
+        go(n, n.role === "forager" ? "surface" : "dig");
+      }
+      continue;
+    }
     if (n.role === "forager") {
       // Leave a few unclaimed seeds so a new player can learn gathering.
       const available = state.items.filter(
@@ -83,9 +126,7 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
           i.id !== state.player.carrying,
       );
       if (available.length <= 3) {
-        n.task = "rest";
-        n.wait = 12;
-        go(n, "store");
+        restAwayFromWork(n);
         continue;
       }
       const item = available.sort((a, b) => distance(n, a) - distance(n, b))[0];
@@ -122,6 +163,10 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       continue;
     }
     if (n.role === "carrier") {
+      if (!hasDigWork(state) && !loose) {
+        restAwayFromWork(n);
+        continue;
+      }
       n.wait = 3;
       n.task = "await-load";
       continue;
@@ -141,8 +186,7 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
             }
           }
       if (!cell) {
-        n.wait = 10;
-        n.task = "rest";
+        restAwayFromWork(n);
         continue;
       }
       n.cell = cell;

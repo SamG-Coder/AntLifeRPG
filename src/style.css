@@ -5,6 +5,21 @@
   background: #171b12;
   font-synthesis: none;
 }
+.graphics-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  font-size: 12px;
+  color: #b9c5aa;
+}
+.graphics-setting select {
+  background: #242d1f;
+  color: #d9e0cb;
+  border: 1px solid #5d6b4d;
+  padding: 8px;
+  font: inherit;
+}
 .scent-choice {
   display: block;
   width: 100%;

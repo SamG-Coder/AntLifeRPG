@@ -10,6 +10,22 @@ const shell = new T.MeshStandardMaterial({
   metalness: 0.13,
 });
 const limbGeometry = new T.CylinderGeometry(0.022, 0.036, 1, 7);
+const limbBatches = new WeakMap();
+function limbBatch(scene) {
+  let batch = limbBatches.get(scene);
+  if (!batch) {
+    const mesh = new T.InstancedMesh(limbGeometry, shell, 2048);
+    mesh.count = 0;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+    scene.add(mesh);
+    batch = { mesh, next: 0 };
+    limbBatches.set(scene, batch);
+  }
+  return batch;
+}
 export async function loadAnt() {
   const gltf = await new GLTFLoader().loadAsync(
     `${import.meta.env.BASE_URL}assets/worker-ant.glb`,
@@ -60,32 +76,29 @@ export async function loadAnt() {
   }
 }
 export class Ant {
-  constructor(scene, x, z, height) {
+  constructor(scene, x, z, height, yaw = 0) {
     this.root = new T.Group();
     this.body = bodyTemplate.clone();
     this.root.add(this.body);
     scene.add(this.root);
     this.root.position.set(x, height(x, z), z);
+    this.root.rotation.y = yaw;
+    this.previousYaw = yaw;
     this.previous = this.root.position.clone();
     this.phase = 0;
     this.legs = [];
     this.height = height;
+    this.limbBatch = limbBatch(scene);
     for (let side = -1; side <= 1; side += 2)
       for (let i = 0; i < 3; i++) {
         const hip = new T.Vector3(side * 0.2, 0.45, -0.28 + i * 0.25);
-        const foot = new T.Vector3(
-          x + side * 0.73,
-          height(x + side * 0.73, z) + 0.025,
-          z - 0.5 + i * 0.52,
-        );
-        const segments = [
-          new T.Mesh(limbGeometry, shell),
-          new T.Mesh(limbGeometry, shell),
-          new T.Mesh(limbGeometry, shell),
-        ];
+        const foot = new T.Vector3(side * 1.03, 0, -0.82 + i * 0.78)
+          .applyAxisAngle(new T.Vector3(0, 1, 0), yaw)
+          .add(this.root.position);
+        foot.y = height(foot.x, foot.z) + 0.025;
+        const segments = [new T.Object3D(), new T.Object3D(), new T.Object3D()];
         for (const m of segments) {
-          m.castShadow = true;
-          scene.add(m);
+          m.userData.instance = this.limbBatch.next++;
         }
         this.legs.push({
           side,
@@ -99,6 +112,7 @@ export class Ant {
           group: (i + (side === 1 ? 1 : 0)) % 2,
         });
       }
+    this.limbBatch.mesh.count = this.limbBatch.next;
     this.cargo = new T.Mesh(
       new T.IcosahedronGeometry(0.23, 1),
       new T.MeshStandardMaterial({ color: 0x987040, roughness: 1 }),
@@ -129,14 +143,20 @@ export class Ant {
       Math.min(1, dt * 12),
     );
     const travel = this.root.position.distanceTo(this.previous);
-    this.phase += travel * 5.6;
+    const turn = Math.abs(
+      Math.atan2(
+        Math.sin(yaw - this.previousYaw),
+        Math.cos(yaw - this.previousYaw),
+      ),
+    );
+    this.phase += (travel + turn * 0.3) * 5.6;
     this.root.updateMatrixWorld(true);
     this.cargo.visible = carrying;
     for (const leg of this.legs) {
       const phase = (this.phase + leg.group * Math.PI) % (Math.PI * 2);
       const swing = phase < Math.PI;
-      const moving = travel > 0.0001;
-      const ideal = new T.Vector3(leg.side * 0.78, 0, -0.58 + leg.index * 0.52)
+      const moving = travel > 0.0001 || turn > 0.002;
+      const ideal = new T.Vector3(leg.side * 1.03, 0, -0.82 + leg.index * 0.78)
         .applyAxisAngle(new T.Vector3(0, 1, 0), yaw)
         .add(this.root.position);
       ideal.y = this.height(ideal.x, ideal.z) + 0.025;
@@ -152,6 +172,7 @@ export class Ant {
         leg.foot.lerpVectors(leg.start, leg.target, t * t * (3 - 2 * t));
         leg.foot.y += Math.sin(t * Math.PI) * 0.17;
       }
+      if (moving && !swing && leg.swing) leg.foot.copy(leg.target);
       if (!moving)
         leg.foot.y = T.MathUtils.lerp(
           leg.foot.y,
@@ -167,15 +188,24 @@ export class Ant {
         0.9,
         -leg.side * Math.sin(yaw),
       ).normalize();
-      const knee = solveKnee(hip, ankle, bend);
+      const knee = solveKnee(hip, ankle, bend, 0.66);
       setSegment(leg.segments[0], hip, knee);
       setSegment(leg.segments[1], knee, ankle);
       setSegment(leg.segments[2], ankle, leg.foot);
+      for (const segment of leg.segments) {
+        segment.updateMatrix();
+        this.limbBatch.mesh.setMatrixAt(
+          segment.userData.instance,
+          segment.matrix,
+        );
+      }
     }
     this.body.position.y =
       travel > 0.0001
         ? Math.sin(this.phase * 2) * 0.012
         : Math.sin(performance.now() * 0.0018) * 0.006;
     this.previous.copy(this.root.position);
+    this.previousYaw = yaw;
+    this.limbBatch.mesh.instanceMatrix.needsUpdate = true;
   }
 }

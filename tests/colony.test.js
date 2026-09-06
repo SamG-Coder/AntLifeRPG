@@ -1,6 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createState, tick, pickup } from "../src/simulation.js";
+test("exhausted crews clear the nursery and resume for newly loosened soil", () => {
+  const s = createState();
+  for (let iz = 0; iz < 3; iz++)
+    for (let iy = 0; iy < 2; iy++)
+      for (let ix = 0; ix < 7; ix++) s.removed.push(`${ix}:${iy}:${iz}`);
+  for (const n of s.npcs) {
+    n.x = -14;
+    n.z = -26;
+  }
+  for (let i = 0; i < 2400; i++) tick(s, 0.05);
+  assert.ok(s.npcs.every((n) => n.task === "off-duty"));
+  assert.ok(s.npcs.every((n) => Math.hypot(n.x + 14, n.z + 25) > 6));
+  const id = s.nextItem++;
+  s.items.push({ id, kind: "soil", x: -14, z: -27, deposited: false });
+  for (let i = 0; i < 2400; i++) tick(s, 0.05);
+  assert.equal(s.items.find((i) => i.id === id).deposited, true);
+  assert.equal(s.colony.soilDelivered, 1);
+});
 test("workers excavate and deliver conserved soil into the shared world", () => {
   const s = createState();
   for (let i = 0; i < 6000; i++) tick(s, 0.05);

@@ -41,11 +41,11 @@ uv('Petiolar node',(0,-.51,.49),(.105,.12,.19),joint)
 g=uv('Gaster',(0,-.94,.48),(.36,.52,.32),shell,48,32)
 uv('Head capsule',(0,.68,.53),(.31,.32,.26),shell,48,32)
 for side in [-1,1]:
-    uv('Compound eye '+str(side),(side*.276,.72,.62),(.075,.12,.10),eye,20,12)
+    uv('Compound eye '+str(side),(side*.278,.72,.62),(.046,.080,.068),eye,20,12)
     # Small convex facets make eye highlights break up at close range.
     for k in range(28):
         a=random.random()*math.tau;b=random.uniform(-.8,.8)
-        uv('Ommatidium',(side*(.295+.025*math.cos(b)),.72+.09*math.sin(a)*math.cos(b),.62+.075*math.cos(a)),(.014,.014,.014),eye,6,4)
+        uv('Ommatidium',(side*(.295+.022*math.cos(b)),.72+.060*math.sin(a)*math.cos(b),.62+.050*math.cos(a)),(.009,.009,.009),eye,6,4)
     outline=[(.065,.87),(.22,.91),(.21,1.08),(.12,1.16),(.035,1.10),(.095,1.08),(.075,1.03),(.12,1.015)]
     mv=[(side*x,y,z) for z in [.425,.48] for x,y in outline];count=len(outline)
     mf=[tuple(reversed(range(count))),tuple(range(count,count*2))]+[(i,(i+1)%count,(i+1)%count+count,i+count) for i in range(count)]

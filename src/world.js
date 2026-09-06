@@ -119,22 +119,26 @@ export function buildWorld(scene, state) {
   for (let i = 0; i < p.count; i++) {
     const x = p.getX(i),
       z = p.getZ(i) - 17;
-    p.setXYZ(i, x, height(x, z) - 0.055, z);
+    p.setXYZ(i, x, height(x, z), z);
   }
   groundGeo.computeVertexNormals();
   const ground = new T.Mesh(groundGeo, soil);
   ground.receiveShadow = true;
   scene.add(ground);
   const matrix = new T.Object3D(),
-    grainGeo = new T.IcosahedronGeometry(1, 0);
-  const grains = new T.InstancedMesh(grainGeo, soil, 16000);
+    grainGeo = new T.IcosahedronGeometry(1, 1);
+  const grainMaterial = new T.MeshStandardMaterial({
+    color: 0x65472e,
+    roughness: 0.93,
+  });
+  const grains = new T.InstancedMesh(grainGeo, grainMaterial, 16000);
   let count = 0;
   for (let i = 0; i < 23000 && count < 16000; i++) {
     const x = rng() * 51 - 24,
       z = rng() * 54 - 42;
     if (field(x, z) > 1) continue;
     const size = 0.012 + rng() ** 4 * 0.1;
-    matrix.position.set(x, height(x, z) + size * 0.25, z);
+    matrix.position.set(x, height(x, z) - size * 0.28, z);
     matrix.rotation.set(rng() * 6, rng() * 6, rng() * 6);
     matrix.scale.set(size * 1.4, size * 0.65, size);
     matrix.updateMatrix();
@@ -144,7 +148,7 @@ export function buildWorld(scene, state) {
       new T.Color().setHSL(
         0.085 + rng() * 0.045,
         0.18 + rng() * 0.22,
-        0.12 + rng() * 0.22,
+        0.18 + rng() * 0.24,
       ),
     );
     count++;
@@ -185,12 +189,62 @@ export function buildWorld(scene, state) {
   cave.castShadow = true;
   cave.receiveShadow = true;
   scene.add(cave);
+  const wallGrains = new T.InstancedMesh(grainGeo, grainMaterial, 12000);
+  const cp = cave.geometry.attributes.position,
+    cn = cave.geometry.attributes.normal;
+  for (let i = 0; i < 12000; i++) {
+    const index = Math.floor(rng() * cp.count),
+      size = 0.01 + rng() ** 3 * 0.045;
+    matrix.position.set(
+      cp.getX(index) - cn.getX(index) * size * 0.65,
+      cp.getY(index) - cn.getY(index) * size * 0.65,
+      cp.getZ(index) - cn.getZ(index) * size * 0.65,
+    );
+    matrix.rotation.set(rng() * 6, rng() * 6, rng() * 6);
+    matrix.scale.set(size, size * 0.75, size * 1.15);
+    matrix.updateMatrix();
+    wallGrains.setMatrixAt(i, matrix.matrix);
+    wallGrains.setColorAt(
+      i,
+      new T.Color().setHSL(
+        0.075 + rng() * 0.06,
+        0.2 + rng() * 0.25,
+        0.15 + rng() * 0.24,
+      ),
+    );
+  }
+  wallGrains.receiveShadow = true;
+  scene.add(wallGrains);
+  const barkCanvas = document.createElement("canvas");
+  barkCanvas.width = 512;
+  barkCanvas.height = 128;
+  const bc = barkCanvas.getContext("2d");
+  bc.fillStyle = "#65503a";
+  bc.fillRect(0, 0, 512, 128);
+  for (let i = 0; i < 600; i++) {
+    const y = rng() * 128;
+    bc.strokeStyle =
+      i % 4 === 0 ? "#251b1280" : i % 3 === 0 ? "#c3a37c50" : "#8b725255";
+    bc.lineWidth = 0.3 + rng() * 1.3;
+    bc.beginPath();
+    bc.moveTo(0, y);
+    for (let x = 0; x <= 512; x += 16)
+      bc.lineTo(
+        x,
+        y + Math.sin(x * 0.012 + i) * 1.3 + Math.sin(x * 0.09 + i) * 0.25,
+      );
+    bc.stroke();
+  }
+  const barkTexture = new T.CanvasTexture(barkCanvas);
+  barkTexture.colorSpace = T.SRGBColorSpace;
+  barkTexture.wrapS = barkTexture.wrapT = T.RepeatWrapping;
+  barkTexture.repeat.set(4, 1);
   const bark = new T.MeshStandardMaterial({
-    color: 0x5d4227,
+    color: 0xcbb699,
     roughness: 0.9,
-    map: texture,
-    bumpMap: texture,
-    bumpScale: 0.22,
+    map: barkTexture,
+    bumpMap: barkTexture,
+    bumpScale: 0.06,
   });
   const root = (points, r) => {
     const curve = new T.CatmullRomCurve3(

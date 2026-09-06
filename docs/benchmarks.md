@@ -19,3 +19,11 @@ Current HUD FPS uses actual wall time. Simulation delta is separately limited to
 ## Compatibility smoke check
 
 The local browser was explicitly started with `?backend=webgl`. It rendered the saved communal-store scene, reported WebGL 2, and produced no captured warnings or errors. After shader startup, the visible two-second HUD sample reported 60 FPS. This verifies one fallback scene on this machine, not equal performance or feature parity across devices.
+
+## Limb batching comparison and contact shading
+
+An isolated limb-batching change reduced the same home-entrance scene from 1,955 to 1,057 draw submissions (45.9% fewer), with unchanged 3,283,349 rendered triangles. Both short HUD observations were approximately 60 FPS. This is evidence of reduced submissions, not evidence of a frame-rate improvement.
+
+Subsequent contact shading, additional soil granules and daylight changes alter the pass count and scene workload, so later measurements are not directly comparable to that isolated test. A later nursery sample at high contact shading reported 491 submissions and 4,128,769 triangles at approximately 60 FPS. View-dependent culling matters. The WebGL2 home startup scene also rendered at approximately 60 FPS after warmup, with no captured warnings/errors. These remain single-machine smoke checks.
+
+The field-notes contact-shading control offers Off, Balanced (half-resolution AO) and High (full-resolution AO), persisted with the colony. It is not yet a complete geometry/shadow quality preset or a benchmark harness.
