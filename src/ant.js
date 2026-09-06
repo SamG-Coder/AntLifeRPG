@@ -141,16 +141,28 @@ export class Ant {
     this.cargo.visible = false;
     this.root.add(this.cargo);
   }
-  update(x, z, yaw, dt, carrying = false, greeting = false) {
+  update(x, z, yaw, dt, carrying = false, greeting = false, resting = false) {
+    const groundTravel = Math.hypot(x - this.previous.x, z - this.previous.z);
+    this.restBlend = T.MathUtils.damp(
+      this.restBlend ?? 0,
+      resting && !greeting && !carrying && groundTravel < 0.001 ? 1 : 0,
+      3,
+      dt,
+    );
+    const quiet = 1 - this.restBlend * 0.85;
+    this.antennaPhase =
+      (this.antennaPhase ?? this.animationTime) +
+      dt * (greeting ? 5 : 1.8) * quiet;
     this.animationTime += dt;
     for (let i = 0; i < this.feelers.length; i++) {
-      const t = this.animationTime;
+      const t = this.antennaPhase;
       this.feelers[i].rotation.y =
-        Math.sin(t * (greeting ? 5 : 1.8) + i * 2) * (greeting ? 0.28 : 0.08);
+        Math.sin(t + i * 2) * (greeting ? 0.28 : 0.08) * quiet;
       this.feelers[i].rotation.x =
-        Math.sin(t * (greeting ? 3.6 : 1.2) + i) * (greeting ? 0.12 : 0.04);
+        Math.sin(t * 0.7 + i) * (greeting ? 0.12 : 0.04) * quiet -
+        this.restBlend * 0.22;
     }
-    this.root.position.set(x, this.height(x, z), z);
+    this.root.position.set(x, this.height(x, z) - this.restBlend * 0.1, z);
     this.yaw = yaw;
     const epsilon = 0.12;
     const normal = new T.Vector3(
@@ -170,7 +182,8 @@ export class Ant {
       new T.Quaternion().setFromRotationMatrix(basis),
       Math.min(1, dt * 12),
     );
-    const travel = this.root.position.distanceTo(this.previous);
+    // Posture changes must not advance walking phases or lift planted feet.
+    const travel = groundTravel;
     const turn = Math.abs(
       Math.atan2(
         Math.sin(yaw - this.previousYaw),
@@ -231,7 +244,7 @@ export class Ant {
     this.body.position.y =
       travel > 0.0001
         ? Math.sin(this.phase * 2) * 0.012
-        : Math.sin(performance.now() * 0.0018) * 0.006;
+        : Math.sin(this.animationTime * 1.8) * 0.006 * quiet;
     this.previous.copy(this.root.position);
     this.previousYaw = yaw;
     this.limbBatch.mesh.instanceMatrix.needsUpdate = true;

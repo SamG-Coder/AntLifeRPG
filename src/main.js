@@ -551,7 +551,11 @@ renderer.setAnimationLoop(() => {
         : moving
           ? Math.atan2(-(n.x - a.root.position.x), -(n.z - a.root.position.z))
           : (a.yaw ?? 0);
-    a.update(n.x, n.z, yaw, dt, !!n.cargo, n.greetingRemaining > 0);
+    const resting =
+      n.task === "off-duty" &&
+      !n.path?.length &&
+      ["sleep", "fatigue"].includes(n.breakReason);
+    a.update(n.x, n.z, yaw, dt, !!n.cargo, n.greetingRemaining > 0, resting);
   }
   rig.update(state.player, dt);
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
@@ -607,6 +611,7 @@ renderer.setAnimationLoop(() => {
       items: state.items.length,
       carrying: state.player.carrying,
       colony: state.colony,
+      restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
     });
     frameCount = 0;
     frameTime = 0;

@@ -89,3 +89,11 @@ Inspection found that load errors and invalid saves silently created a new colon
 Expanded structural validation for worker identities, finite worker positions, memories, routes, item IDs and allocation counters. This is not a full semantic world repair system. Added five IndexedDB-level tests for generation independence, corrupt-primary recovery, unrecoverable-record preservation, invalid live-state rejection and transaction-abort rollback. The test-only implementation is fake-indexeddb (https://github.com/dumbmatter/fakeIndexedDB); it does not ship in the production bundle and is not a substitute for browser testing. All 26 tests pass.
 
 The existing real-browser save loaded day two in the moss chamber with its prior player deliveries intact and no captured warnings/errors. HUD save failure reporting now remains honest after a rejected save. Missing both valid generations stops loading instead of resetting progress; a user-facing export/repair workflow and cross-tab ownership protection remain future work.
+
+## Schedule-driven resting posture
+
+Workers settled at a sleeping spot during sleep/fatigue breaks now blend into a lowered stance, with reduced body motion and slower, lower antenna sweeps. Movement, cargo and greetings suppress the resting blend. Posture height changes no longer count as walking distance, preventing spurious foot lifts while settling. Antenna oscillation accumulates phase rather than multiplying absolute time by a changing speed, avoiding rapid phase jumps through wake/rest transitions.
+
+The browser playtest walked home, used the player rest interaction to advance two hours, and returned to the moss chamber. At about 09:00 the roster showed four underground workers between shifts; rendered telemetry independently showed four workers above 80% resting blend. Visually inspected feet and lowered workers beside alert workers, with no captured warnings/errors. Saved the actual canvas frame as resting-posture.png. This is a modest lowered pose, not a curled-leg sleep cycle, species-accurate sleep model or leaf-contact solver. A specifically sleeping worker's greeting transition still needs isolated close-up inspection.
+
+All 26 existing tests and lint pass. Production build succeeds. No implementation-mirroring unit test was added for the small visual blend; browser inspection provides the relevant evidence.
