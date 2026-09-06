@@ -1,7 +1,8 @@
 import * as T from "three/webgpu";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
-import { setSegment, solveKnee } from "./math.js";
+import { setSegment, solveLeg } from "./math.js";
+import { reachableFoot } from "./foot-contact.js";
 import { projectContact } from "./contact.js";
 import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
@@ -224,6 +225,8 @@ export class Ant {
     this.phase += (travel + turn * 0.3) * 5.6;
     this.root.updateMatrixWorld(true);
     this.cargo.visible = carrying;
+    this.unreachableFeet = 0;
+    this.maxLegLengthError = 0;
     for (const leg of this.legs) {
       const phase = (this.phase + leg.group * Math.PI) % (Math.PI * 2);
       const swing = phase < Math.PI;
@@ -268,16 +271,37 @@ export class Ant {
       if (leg.foot.distanceTo(ideal) > 1.4) leg.foot.copy(ideal);
       leg.swing = moving && swing;
       const hip = leg.hip.clone().applyMatrix4(this.root.matrixWorld);
-      const ankle = leg.foot.clone().addScaledVector(normal, 0.065);
+      if (hip.distanceTo(leg.foot) > 1.24) {
+        const density =
+          surface && this.contactDensity
+            ? this.contactDensity
+            : (x, y, z) => this.height(x, z) - y;
+        const reachable = reachableFoot(density, hip, ideal);
+        if (reachable) {
+          leg.foot.copy(reachable);
+          leg.target.copy(reachable);
+          leg.start.copy(reachable);
+        }
+      }
+      const requestedAnkle = leg.foot.clone().addScaledVector(normal, 0.065);
       const bend = right
         .clone()
         .multiplyScalar(leg.side)
         .addScaledVector(normal, 0.9)
         .normalize();
-      const knee = solveKnee(hip, ankle, bend, 0.66);
+      const { knee, ankle } = solveLeg(hip, requestedAnkle, bend, 0.66);
+      if (ankle.distanceTo(requestedAnkle) > 0.001) this.unreachableFeet++;
+      this.maxLegLengthError = Math.max(
+        this.maxLegLengthError,
+        Math.abs(hip.distanceTo(knee) - 0.66),
+        Math.abs(knee.distanceTo(ankle) - 0.66),
+      );
+      // If no soil lies within reach, keep a finite unsupported leg instead of
+      // stretching its bones to pretend it is planted.
+      const renderedFoot = leg.foot.clone().add(ankle).sub(requestedAnkle);
       setSegment(leg.segments[0], hip, knee);
       setSegment(leg.segments[1], knee, ankle);
-      setSegment(leg.segments[2], ankle, leg.foot);
+      setSegment(leg.segments[2], ankle, renderedFoot);
       for (const segment of leg.segments) {
         segment.updateMatrix();
         this.limbBatch.mesh.setMatrixAt(

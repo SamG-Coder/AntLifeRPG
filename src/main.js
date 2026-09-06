@@ -711,6 +711,10 @@ renderer.setAnimationLoop(() => {
       colony: state.colony,
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
+      feet: {
+        unreachable: player.unreachableFeet,
+        maxSegmentError: player.maxLegLengthError,
+      },
       camera: {
         position: camera.position.toArray(),
         obstructionOffset: rig.obstructionOffset,
