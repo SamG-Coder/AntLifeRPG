@@ -25,6 +25,10 @@ There are 24 named workers, a home, food store, excavation face, spoil bed and s
 
 This is an early prototype, not the finished vertical slice or the final graphical quality target. Climbing, full soil stability, mature schedules/relationships, cooperative hauling, leisure, home furnishing, quality presets and broad performance validation are still outstanding. See [the critical iteration log](docs/iteration-log.md).
 
+Actual gameplay renderer capture, with HTML HUD omitted; no retouching or generated imagery:
+
+![Worker at the home entrance](docs/screenshots/worker-entrance.png)
+
 ## Editable assets
 
 `assets/worker-ant.blend` is the source model. Rebuild it and the glTF with:

@@ -26,6 +26,16 @@
   color: #bac4a5;
   font-size: 10px;
 }
+#capture-button {
+  position: absolute;
+  right: 40px;
+  bottom: 135px;
+  border: 0;
+  background: #142012b0;
+  color: #9aab89;
+  padding: 6px 12px;
+  font-size: 9px;
+}
 * {
   box-sizing: border-box;
 }

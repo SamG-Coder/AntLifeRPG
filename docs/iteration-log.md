@@ -40,3 +40,11 @@ Public commit 25dbd6a passed GitHub Actions, deployed successfully, and was open
 - No leisure activity or physical home furnishing loop yet.
 - Initial ant appearance remains below the reference bar despite improved thorax topology and cuticle roughness.
 - Per-frame draw-call telemetry was corrected after discovering that the original field was a cumulative render-call counter. See benchmarks.md.
+
+## Gathering and delivery verification
+
+The browser playtest followed the surface seed scent, lifted a fallen seed, carried it through the tunnel to the communal store, delivered it, and ate. The HUD showed one delivered soil clump and one gathered seed, with nourishment rising from approximately 68 to 93 after the meal. Player seed deliveries now feed the same colony reserve used by NPC deliveries and meals.
+
+Added a local-development gameplay capture button. It saves pixels from the actual rendered game canvas to `docs/screenshots`; it does not synthesize or retouch images. The development server accepts these captures only from local browser origins, and the production game does not contain this capture endpoint or button.
+
+Saved and visually inspected `worker-home.png` and `worker-entrance.png`. These are direct canvas captures without the HTML HUD. A turning inspection exposed mixed Euler/quaternion updates that could produce an incorrect body pose; removed the conflicting Euler assignment. Rebuilt curled tube mandibles as serrated wedge meshes. Distributed NPC destination points and widened local separation to reduce pileups; crowd navigation still needs work.

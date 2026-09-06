@@ -7,6 +7,14 @@ export function soilCellPosition(id) {
 
 function go(n, destination, position) {
   n.path = scentRoute(n, destination);
+  if (["home", "store", "spoil"].includes(destination) && n.path.length) {
+    const end = n.path.at(-1),
+      angle = n.id * 2.39996;
+    n.path[n.path.length - 1] = {
+      x: end.x + Math.cos(angle) * 1.35,
+      z: end.z + Math.sin(angle) * 1.35,
+    };
+  }
   if (position) n.path.push(position);
   n.destination = destination;
 }
@@ -161,10 +169,10 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       const a = state.npcs[i],
         b = state.npcs[j],
         d = distance(a, b);
-      if (d < 0.95) {
+      if (d < 1.4) {
         const dx = d > 0.001 ? (a.x - b.x) / d : (i + j) % 2 ? 1 : -1,
           dz = d > 0.001 ? (a.z - b.z) / d : 0;
-        const push = Math.min(0.04, (0.95 - d) * 0.2) * Math.min(1, dt * 20);
+        const push = Math.min(0.04, (1.4 - d) * 0.2) * Math.min(1, dt * 20);
         a.x += dx * push;
         a.z += dz * push;
         b.x -= dx * push;

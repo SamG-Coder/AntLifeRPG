@@ -109,7 +109,6 @@ export class Ant {
   }
   update(x, z, yaw, dt, carrying = false) {
     this.root.position.set(x, this.height(x, z), z);
-    this.root.rotation.y = yaw;
     this.yaw = yaw;
     const epsilon = 0.12;
     const normal = new T.Vector3(

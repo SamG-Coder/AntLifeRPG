@@ -44,7 +44,11 @@ const camera = new T.PerspectiveCamera(53, innerWidth / innerHeight, 0.04, 130);
 camera.position.set(3, 3, 7);
 scene.add(camera);
 const senses = new AntSenses(camera);
-const renderer = new T.WebGPURenderer({ canvas: $("world"), antialias: true });
+const renderer = new T.WebGPURenderer({
+  canvas: $("world"),
+  antialias: true,
+  forceWebGL: new URLSearchParams(location.search).get("backend") === "webgl",
+});
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.shadowMap.enabled = true;
@@ -295,6 +299,27 @@ notesButton.id = "notes-button";
 notesButton.textContent = "H · Scent & field notes";
 notesButton.onclick = journal;
 $("hud").append(notesButton);
+if (import.meta.env.DEV) {
+  const capture = document.createElement("button");
+  capture.id = "capture-button";
+  capture.textContent = "Save gameplay frame";
+  capture.onclick = async () => {
+    try {
+      renderer.render(scene, camera);
+      const pixels = renderer.domElement.toDataURL("image/png");
+      const response = await fetch("/__capture", {
+        method: "POST",
+        body: pixels,
+      });
+      if (!response.ok) throw new Error("Capture failed");
+      const result = await response.json();
+      toast(`Actual gameplay frame saved: ${result.path}`);
+    } catch (error) {
+      toast(error.message);
+    }
+  };
+  $("hud").append(capture);
+}
 $("enter").onclick = () => {
   started = true;
   $("enter").style.display = "none";
@@ -331,6 +356,7 @@ addEventListener("resize", () => {
   renderer.setSize(innerWidth, innerHeight);
 });
 async function persist() {
+  if (!started) return;
   try {
     await save(state);
     lastSave = elapsed;

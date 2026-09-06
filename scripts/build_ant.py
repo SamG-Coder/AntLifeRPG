@@ -46,7 +46,11 @@ for side in [-1,1]:
     for k in range(28):
         a=random.random()*math.tau;b=random.uniform(-.8,.8)
         uv('Ommatidium',(side*(.295+.025*math.cos(b)),.72+.09*math.sin(a)*math.cos(b),.62+.075*math.cos(a)),(.014,.014,.014),eye,6,4)
-    tube('Mandible '+str(side),[(side*.15,.89,.44),(side*.23,1.04,.42),(side*.11,1.14,.43),(side*.035,1.06,.45)],.035,shell)
+    outline=[(.065,.87),(.22,.91),(.21,1.08),(.12,1.16),(.035,1.10),(.095,1.08),(.075,1.03),(.12,1.015)]
+    mv=[(side*x,y,z) for z in [.425,.48] for x,y in outline];count=len(outline)
+    mf=[tuple(reversed(range(count))),tuple(range(count,count*2))]+[(i,(i+1)%count,(i+1)%count+count,i+count) for i in range(count)]
+    mm=bpy.data.meshes.new('Serrated mandible');mm.from_pydata(mv,[],mf);mm.update();mo=bpy.data.objects.new('Mandible '+str(side),mm);bpy.context.collection.objects.link(mo);mo.data.materials.append(shell)
+    bevel=mo.modifiers.new('Cuticle edge','BEVEL');bevel.width=.009;bevel.segments=2;bpy.context.view_layer.objects.active=mo;mo.select_set(True);bpy.ops.object.modifier_apply(modifier=bevel.name);mo.select_set(False)
     tube('Antenna scape '+str(side),[(side*.14,.85,.66),(side*.33,1.01,.85),(side*.42,1.19,.86)],.018,joint)
     tube('Antenna funiculus '+str(side),[(side*.42,1.19,.86),(side*.30,1.45,.72),(side*.32,1.63,.62)],.012,shell)
     for k in range(7):uv('Antenna segment',(side*(.30+.02*k/7),1.43+.20*k/7,.73-.10*k/7),(.017,.018,.017),joint,8,6)

@@ -63,6 +63,7 @@ export function createState() {
     items: [],
     nextItem: 1,
     events: [],
+    colony: { soilDelivered: 0, seedsDelivered: 0, food: 45 },
     discovered: ["home"],
     home: { decorations: 0 },
     settings: { firstPerson: false },
@@ -117,6 +118,7 @@ export function deposit(state, position) {
   if (distance(position, sites.store) < 3 && item.kind === "seed") {
     item.deposited = true;
     state.player.seeds++;
+    if (state.colony) state.colony.food++;
   }
   return true;
 }

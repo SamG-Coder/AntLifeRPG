@@ -54,3 +54,21 @@ test("serialized state retains excavation, relationships and cargo", () => {
   assert.deepEqual(copy, s);
   assert.equal(validateState({ version: 0 }), false);
 });
+test("player seed delivery increases the same food reserve used by the colony", () => {
+  const s = createState();
+  const seed = {
+    id: s.nextItem++,
+    kind: "seed",
+    x: 13,
+    z: -31,
+    deposited: false,
+  };
+  s.items.push(seed);
+  pickup(s, seed);
+  const food = s.colony.food;
+  deposit(s, sites.store);
+  assert.equal(s.colony.food, food + 1);
+  assert.equal(s.player.seeds, 1);
+  assert.equal(deposit(s, sites.store), false);
+  assert.equal(s.colony.food, food + 1);
+});
