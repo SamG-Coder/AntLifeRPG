@@ -26,7 +26,13 @@ function clearGround(a, b, canWalk) {
 
 // Search the small chamber graph, then attach each available parcel to it.
 // Parcel ownership stays with the simulation; following a scent is no reservation.
-export function itemScentRoute(state, kind, canWalk, origin = state.player) {
+export function itemScentRoute(
+  state,
+  kind,
+  canWalk,
+  origin = state.player,
+  accept = () => true,
+) {
   const nodes = [origin, ...Object.values(sites)];
   const costs = nodes.map(() => Infinity),
     paths = nodes.map(() => []);
@@ -57,7 +63,7 @@ export function itemScentRoute(state, kind, canWalk, origin = state.player) {
   }
   let best = null;
   for (const item of state.items) {
-    if (!collectableItem(state, item, kind)) continue;
+    if (!collectableItem(state, item, kind) || !accept(item)) continue;
     for (let i = 0; i < nodes.length; i++) {
       const cost = costs[i] + distance(nodes[i], item);
       if (

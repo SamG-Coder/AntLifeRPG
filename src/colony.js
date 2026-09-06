@@ -9,6 +9,7 @@ import { reservedSeeds } from "./food-supply.js";
 import { nutrition } from "./nutrition.js";
 import { nurseryLeafPlace } from "./nursery-lining.js";
 import { itemScentRoute } from "./item-route.js";
+import { gatherableBy, refreshGatherTarget } from "./worker-gathering.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -31,6 +32,7 @@ function go(n, destination, position) {
 }
 
 function restAwayFromWork(n) {
+  n.gatherItem = null;
   const place = restingPlace(n.id);
   if (n.breakReason === "meal") go(n, "store");
   else {
@@ -53,12 +55,8 @@ function hasDigWork(state) {
 }
 
 export function hasWorkerJob(state, worker) {
-  const available = state.items.filter(
-    (item) =>
-      !item.deposited &&
-      item.owner == null &&
-      !(item.fallHeight > 0) &&
-      item.id !== state.player.carrying,
+  const available = state.items.filter((item) =>
+    gatherableBy(state, worker, item),
   );
   return worker.role === "forager"
     ? available.filter((item) => item.kind === "seed").length >
@@ -79,9 +77,10 @@ export function updateColony(
   state.colony ??= { soilDelivered: 0, seedsDelivered: 0, food: 45 };
   const jobAvailability = new Map();
   updateWorkerEncounters(state, dt, canMeet, (n) => {
-    if (!jobAvailability.has(n.role))
-      jobAvailability.set(n.role, hasWorkerJob(state, n));
-    return jobAvailability.get(n.role);
+    const key = `${n.role}:${n.gatherItem ?? "free"}`;
+    if (!jobAvailability.has(key))
+      jobAvailability.set(key, hasWorkerJob(state, n));
+    return jobAvailability.get(key);
   });
   for (const n of state.npcs) {
     if (!n.workVersion) {
@@ -92,8 +91,10 @@ export function updateColony(
       go(n, n.role === "forager" ? "surface" : "dig");
     }
     updateNeeds(n, dt);
+    refreshGatherTarget(state, n);
     const oldApproach = n.path?.at(-1);
     if (
+      n.gatherItem == null &&
       n.destination === "dig" &&
       oldApproach?.x === -14 &&
       oldApproach?.z === -27
@@ -232,13 +233,7 @@ export function updateColony(
     }
     if (n.role === "carrier" && state.nurseryLining) {
       const leaf = state.items
-        .filter(
-          (i) =>
-            i.nurserySlot !== undefined &&
-            !i.deposited &&
-            i.owner == null &&
-            i.id !== state.player.carrying,
-        )
+        .filter((i) => i.nurserySlot !== undefined && gatherableBy(state, n, i))
         .sort((a, b) => distance(n, a) - distance(n, b))[0];
       if (leaf) {
         if (distance(n, leaf) > 1) {
@@ -247,15 +242,18 @@ export function updateColony(
             "nursery-leaf",
             canWalk ?? (() => true),
             n,
+            (item) => gatherableBy(state, n, item),
           );
           if (!trail) {
             restAwayFromWork(n);
             continue;
           }
           n.path = trail.route;
+          n.gatherItem = trail.itemId;
           n.task = "gather-lining";
         } else {
           leaf.owner = n.id;
+          n.gatherItem = null;
           n.cargo = leaf.id;
           n.task = "carry-lining";
           go(n, "dig", nurseryLeafPlace(leaf.nurserySlot));
@@ -266,12 +264,7 @@ export function updateColony(
     if (n.role === "forager") {
       // Leave a few unclaimed seeds so a new player can learn gathering.
       const available = state.items.filter(
-        (i) =>
-          i.kind === "seed" &&
-          !(i.fallHeight > 0) &&
-          !i.deposited &&
-          i.owner == null &&
-          i.id !== state.player.carrying,
+        (i) => i.kind === "seed" && gatherableBy(state, n, i),
       );
       if (available.length <= reservedSeeds(state)) {
         restAwayFromWork(n);
@@ -280,31 +273,28 @@ export function updateColony(
       const item = available.sort((a, b) => distance(n, a) - distance(n, b))[0];
       if (distance(n, item) > 1) {
         n.path = [{ x: item.x, z: item.z }];
+        n.gatherItem = item.id;
         n.task = "forage";
         continue;
       }
       item.owner = n.id;
+      n.gatherItem = null;
       n.cargo = item.id;
       n.task = "carry";
       go(n, "store");
       continue;
     }
     const loose = state.items
-      .filter(
-        (i) =>
-          i.kind === "soil" &&
-          !(i.fallHeight > 0) &&
-          !i.deposited &&
-          i.owner == null &&
-          i.id !== state.player.carrying,
-      )
+      .filter((i) => i.kind === "soil" && gatherableBy(state, n, i))
       .sort((a, b) => distance(n, a) - distance(n, b))[0];
     if (loose && distance(n, loose) < 6) {
       if (distance(n, loose) > 1) {
         n.path = [{ x: loose.x, z: loose.z }];
+        n.gatherItem = loose.id;
         n.task = "collect";
       } else {
         loose.owner = n.id;
+        n.gatherItem = null;
         n.cargo = loose.id;
         n.task = "carry";
         go(n, "spoil");

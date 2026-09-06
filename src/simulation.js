@@ -8,6 +8,7 @@ import { advanceFoodSupply, validFoodSupply } from "./food-supply.js";
 import { nutrition } from "./nutrition.js";
 import { validBedding } from "./bedding.js";
 import { advanceNurseryLining, validNurseryLining } from "./nursery-lining.js";
+import { validGatherTargets } from "./worker-gathering.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -277,6 +278,7 @@ export function validateState(state) {
     validFoodSupply(state) &&
     validBedding(state) &&
     validNurseryLining(state) &&
+    validGatherTargets(state) &&
     new Set(state.items.map((i) => i.id)).size === state.items.length &&
     Number.isInteger(state.nextItem) &&
     state.items.every((i) => i.id < state.nextItem) &&

@@ -979,6 +979,12 @@ renderer.setAnimationLoop(() => {
       carrying: state.player.carrying,
       colony: state.colony,
       nurseryLining: nurseryLiningProgress(state),
+      gathering: state.npcs
+        .filter((n) => n.gatherItem != null)
+        .map((n) => ({
+          worker: n.id,
+          item: n.gatherItem,
+        })),
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
       grooming: {
