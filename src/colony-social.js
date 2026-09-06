@@ -1,4 +1,5 @@
 import { breakReason } from "./daily-life.js";
+import { advanceGrooming } from "./grooming.js";
 
 const near = (a, b) => Math.hypot(a.x - b.x, a.z - b.z) <= 2.8;
 const available = (n, time) =>
@@ -9,6 +10,13 @@ function finish(a, b, day, completed) {
     [b, a],
   ]) {
     if (!worker) continue;
+    if (worker.encounterKind === "groom") {
+      worker.groomRemaining = 0;
+      if (completed) {
+        worker.sharedGroomingBouts = (worker.sharedGroomingBouts ?? 0) + 1;
+        worker.lastSharedGroomDay = day;
+      }
+    }
     if (completed && other) {
       worker.bonds ??= [];
       let bond = worker.bonds.find((entry) => entry.id === other.id);
@@ -22,6 +30,7 @@ function finish(a, b, day, completed) {
       }
     }
     worker.encounterPartner = null;
+    worker.encounterKind = null;
     worker.encounterRemaining = 0;
     worker.socialCooldown = 45 + (worker.id % 5) * 4;
   }
@@ -56,8 +65,23 @@ export function encounterPreference(a, b) {
   return familiarity * 0.35 - Math.hypot(a.x - b.x, a.z - b.z);
 }
 
-export function updateWorkerEncounters(state, dt, canMeet = () => true) {
+export function updateWorkerEncounters(
+  state,
+  dt,
+  canMeet = () => true,
+  hasWork = () => false,
+) {
   const workers = state.npcs;
+  const idle = (n) =>
+    n.task === "off-duty" && !n.path?.length && !n.cargo && !hasWork(n);
+  const sharedBreak = (a, b) =>
+    idle(a) &&
+    idle(b) &&
+    a.lastSharedGroomDay !== state.day &&
+    b.lastSharedGroomDay !== state.day &&
+    ((a.cleanliness ?? 78) < 85 || (b.cleanliness ?? 78) < 85) &&
+    a.bonds?.some((bond) => bond.id === b.id) &&
+    b.bonds?.some((bond) => bond.id === a.id);
   for (const n of workers)
     n.socialCooldown = Math.max(0, (n.socialCooldown ?? 20 + n.id * 0.7) - dt);
   const visited = new Set();
@@ -72,10 +96,15 @@ export function updateWorkerEncounters(state, dt, canMeet = () => true) {
       !available(a, state.time) ||
       !available(b, state.time) ||
       !near(a, b) ||
-      !canMeet(a, b)
+      !canMeet(a, b) ||
+      (a.encounterKind === "groom" && (!idle(a) || !idle(b)))
     ) {
       finish(a, b?.encounterPartner === a.id ? b : null, state.day, false);
       continue;
+    }
+    if (a.encounterKind === "groom") {
+      advanceGrooming(a, Math.min(dt, a.encounterRemaining));
+      advanceGrooming(b, Math.min(dt, a.encounterRemaining));
     }
     a.encounterRemaining = Math.max(0, a.encounterRemaining - dt);
     b.encounterRemaining = a.encounterRemaining;
@@ -86,7 +115,7 @@ export function updateWorkerEncounters(state, dt, canMeet = () => true) {
     if (active >= 2) break;
     if (
       !available(a, state.time) ||
-      a.socialCooldown > 0 ||
+      (a.socialCooldown > 0 && !idle(a)) ||
       a.encounterRemaining > 0
     )
       continue;
@@ -95,13 +124,15 @@ export function updateWorkerEncounters(state, dt, canMeet = () => true) {
         (n) =>
           n.id !== a.id &&
           available(n, state.time) &&
-          n.socialCooldown === 0 &&
+          (n.socialCooldown === 0 || sharedBreak(a, n)) &&
           !(n.encounterRemaining > 0) &&
           near(a, n) &&
           canMeet(a, n) &&
-          !a.bonds?.some(
-            (bond) => bond.id === n.id && bond.lastDay === state.day,
-          ),
+          (sharedBreak(a, n) ||
+            (a.socialCooldown === 0 &&
+              !a.bonds?.some(
+                (bond) => bond.id === n.id && bond.lastDay === state.day,
+              ))),
       )
       .sort(
         (left, right) =>
@@ -109,13 +140,15 @@ export function updateWorkerEncounters(state, dt, canMeet = () => true) {
           left.id - right.id,
       )[0];
     if (!b) continue;
+    const together = sharedBreak(a, b);
     for (const [worker, other] of [
       [a, b],
       [b, a],
     ]) {
       worker.encounterPartner = other.id;
-      worker.encounterRemaining = 2.4;
-      worker.groomRemaining = 0;
+      worker.encounterKind = together ? "groom" : "scent";
+      worker.encounterRemaining = together ? 8 : 2.4;
+      worker.groomRemaining = together ? 8 : 0;
     }
     active++;
   }
@@ -123,10 +156,27 @@ export function updateWorkerEncounters(state, dt, canMeet = () => true) {
 
 export function validWorkerBonds(worker, ids) {
   if (
+    worker.encounterKind != null &&
+    !["scent", "groom"].includes(worker.encounterKind)
+  )
+    return false;
+  if (
+    worker.sharedGroomingBouts !== undefined &&
+    (!Number.isInteger(worker.sharedGroomingBouts) ||
+      worker.sharedGroomingBouts < 0)
+  )
+    return false;
+  if (
+    worker.lastSharedGroomDay !== undefined &&
+    (!Number.isInteger(worker.lastSharedGroomDay) ||
+      worker.lastSharedGroomDay < 1)
+  )
+    return false;
+  if (
     worker.encounterRemaining !== undefined &&
     (!Number.isFinite(worker.encounterRemaining) ||
       worker.encounterRemaining < 0 ||
-      worker.encounterRemaining > 2.4)
+      worker.encounterRemaining > (worker.encounterKind === "groom" ? 8 : 2.4))
   )
     return false;
   if (

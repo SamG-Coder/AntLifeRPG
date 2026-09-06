@@ -353,6 +353,8 @@ function journal() {
         .map((b) => state.npcs.find((other) => other.id === b.id)?.name)
         .filter(Boolean)
         .join(", ")}`;
+    if (n.sharedGroomingBouts)
+      row.textContent += ` · ${n.sharedGroomingBouts} shared grooming breaks`;
     roster.append(row);
   }
   $("memories").textContent =
@@ -719,7 +721,8 @@ renderer.setAnimationLoop(() => {
       yaw,
       dt,
       !!n.cargo,
-      n.greetingRemaining > 0 || n.encounterRemaining > 0,
+      n.greetingRemaining > 0 ||
+        (n.encounterRemaining > 0 && n.encounterKind !== "groom"),
       resting,
       null,
       n.groomRemaining > 0,
@@ -793,6 +796,15 @@ renderer.setAnimationLoop(() => {
       },
       workerEncounters:
         state.npcs.filter((n) => n.encounterRemaining > 0).length / 2,
+      sharedGrooming: {
+        pairs:
+          state.npcs.filter(
+            (n) => n.encounterKind === "groom" && n.encounterRemaining > 0,
+          ).length / 2,
+        completed:
+          state.npcs.reduce((sum, n) => sum + (n.sharedGroomingBouts ?? 0), 0) /
+          2,
+      },
       workerBonds:
         state.npcs.reduce((total, n) => total + (n.bonds?.length ?? 0), 0) / 2,
       feet: {

@@ -31,6 +31,8 @@ export function breakReason(worker, minutes) {
 }
 
 export function activityLabel(worker) {
+  if (worker.encounterRemaining > 0 && worker.encounterKind === "groom")
+    return "Grooming beside a familiar nestmate";
   if (worker.encounterRemaining > 0) return "Exchanging scents with a nestmate";
   if (worker.groomRemaining > 0) return "Grooming antennae";
   if (worker.greetingRemaining > 0) return "Exchanging scents with you";

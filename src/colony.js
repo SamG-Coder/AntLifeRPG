@@ -41,6 +41,18 @@ function hasDigWork(state) {
   return false;
 }
 
+export function hasWorkerJob(state, worker) {
+  const available = state.items.filter(
+    (item) =>
+      !item.deposited &&
+      item.owner == null &&
+      item.id !== state.player.carrying,
+  );
+  return worker.role === "forager"
+    ? available.filter((item) => item.kind === "seed").length > 3
+    : available.some((item) => item.kind === "soil") || hasDigWork(state);
+}
+
 /** NPC cargo refers to the same persistent item table used by the player. */
 export function updateColony(
   state,
@@ -48,7 +60,12 @@ export function updateColony(
   { sites, distance, excavate, canMeet },
 ) {
   state.colony ??= { soilDelivered: 0, seedsDelivered: 0, food: 45 };
-  updateWorkerEncounters(state, dt, canMeet);
+  const jobAvailability = new Map();
+  updateWorkerEncounters(state, dt, canMeet, (n) => {
+    if (!jobAvailability.has(n.role))
+      jobAvailability.set(n.role, hasWorkerJob(state, n));
+    return jobAvailability.get(n.role);
+  });
   for (const n of state.npcs) {
     if (!n.workVersion) {
       n.workVersion = 1;
@@ -148,21 +165,7 @@ export function updateColony(
         continue;
       }
       if (n.breakReason) continue;
-      const looseLoad = state.items.some(
-        (i) =>
-          i.kind === "soil" &&
-          !i.deposited &&
-          i.owner == null &&
-          i.id !== state.player.carrying,
-      );
-      const seeds = state.items.filter(
-        (i) =>
-          i.kind === "seed" &&
-          !i.deposited &&
-          i.owner == null &&
-          i.id !== state.player.carrying,
-      ).length;
-      if (n.role === "forager" ? seeds > 3 : looseLoad || hasDigWork(state)) {
+      if (hasWorkerJob(state, n)) {
         n.groomRemaining = 0;
         n.task = "commute";
         go(n, n.role === "forager" ? "surface" : "dig");

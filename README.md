@@ -27,6 +27,8 @@ There are 24 named workers, a home, food store, excavation face, spoil bed and s
 
 Nearby workers occasionally pause to exchange scents when the soil between them is clear. Completed encounters build persistent familiarity between those workers, shown in Colony lives, and give familiar nearby nestmates a modest preference in future partner choices. Needs and deliveries remain part of their ongoing routines.
 
+Idle familiar nestmates can groom their own antennae beside each other for eight seconds. Both become cleaner, and completed shared breaks appear in Colony lives. Cargo, urgent needs, obstructed contact and renewed jobs prevent or interrupt the activity. This is shared self-grooming, not mutual cleaning of another ant.
+
 The player can traverse nest-soil walls and ceilings with an oriented camera and saved attachment state. Grip currently excludes roots, rocks and foliage; workers still follow ground routes. Tight transitions and excavation clearance need further refinement.
 
 Stored seeds provide upper-surface footholds for the player and workers. Ground posture raises the sampled body over the pile, and the camera follows that height. Seed envelopes also participate in grip contacts. This is kinematic contact with a static pile; movable-seed physics and full limb collision remain outstanding.

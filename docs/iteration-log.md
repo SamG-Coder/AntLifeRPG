@@ -221,3 +221,13 @@ Ground body height now eases downward toward the required clearance height, inst
 All 61 tests, lint and build pass. Tests verify monotonic settling to the floor, immediate upward clearance, stance-reach limiting, exclusion of airborne feet and frame-subdivision equivalence in an unconstrained interval. Production preview walked from the saved seed pose (ground lift 0.5315) to home, where lift returned to zero with no unreachable feet and segment error around 1.1e-16. The endpoint was visually inspected, near 60 FPS with no captured warnings/errors. The brief descent itself was not captured frame by frame; its temporal behavior is verified by the tests.
 
 This remains kinematic posture adjustment. It does not supply gravity, force-based support, fall behavior or swept collision, and immediate rises or reach constraints can still produce abrupt corrections.
+
+## Shared grooming beside familiar nestmates
+
+Familiar workers who are idle, nearby, free of cargo and urgent needs can now take an eight-second grooming break together when either needs cleaning. Each uses the existing self-grooming animation, facing its partner, and gains cleanliness gradually. Completed breaks persist in the roster, limited to one per participant per day. A shared break may follow a recent scent exchange despite its ordinary social cooldown. Daily scent familiarity still increments at most once.
+
+Work availability is shared between the social activity and off-duty scheduler. A renewed job, hunger/fatigue/schedule change, separation, obstruction or player greeting cancels the unfinished activity and clears grooming timers without completion credit. Partial cleaning remains. Saved activity kind, duration and shared completion fields are validated.
+
+Tests cover two-worker cleaning/completion, serialized progress, daily limits, interruption and the actual colony scheduler returning adjacent-bed partners to work after a loose soil load appears. A fresh headless simulation over 900 simulated seconds produced five shared breaks without manually assigning bonds. Production preview reached the fern sleeping chamber and showed the existing acquaintance roster with no captured shared break; this older colony had already finished its excavation and self-grooming. Active pair animation and natural shared-break occurrence with browser terrain obstruction remain unverified. This is shared self-care rather than allogrooming, an approach-to-contact controller or consequential friendship beyond partner choice and a shared activity.
+
+All 64 tests, lint and the production build pass. Browser inspection captured no warnings/errors and ran near 60 FPS at the inspected point.
