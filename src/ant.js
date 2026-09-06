@@ -2,7 +2,7 @@ import * as T from "three/webgpu";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { setSegment, solveLeg } from "./math.js";
-import { reachableFoot } from "./foot-contact.js";
+import { reachableFoot, recoveryStep } from "./foot-contact.js";
 import { projectContact } from "./contact.js";
 import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
@@ -226,11 +226,12 @@ export class Ant {
     this.root.updateMatrixWorld(true);
     this.cargo.visible = carrying;
     this.unreachableFeet = 0;
+    this.recoveringFeet = 0;
     this.maxLegLengthError = 0;
     for (const leg of this.legs) {
       const phase = (this.phase + leg.group * Math.PI) % (Math.PI * 2);
       const swing = phase < Math.PI;
-      const moving = travel > 0.0001 || turn > 0.002;
+      const moving = !leg.recovery && (travel > 0.0001 || turn > 0.002);
       const ideal = new T.Vector3(leg.side * 1.03, 0, -0.82 + leg.index * 0.78);
       if (surface) ideal.applyQuaternion(this.root.quaternion);
       else ideal.applyAxisAngle(new T.Vector3(0, 1, 0), yaw);
@@ -259,7 +260,9 @@ export class Ant {
       if (moving && !swing && leg.swing) leg.foot.copy(leg.target);
       if (!moving && surface) {
         const planted = leg.foot.clone();
-        ground(planted);
+        const density = this.contactDensity?.(planted.x, planted.y, planted.z);
+        if (density === undefined || density > 0.04 || density < -0.08)
+          ground(planted);
         leg.foot.lerp(planted, Math.min(1, dt * 15));
       }
       if (!moving && !surface)
@@ -268,19 +271,44 @@ export class Ant {
           this.height(leg.foot.x, leg.foot.z) + 0.025,
           Math.min(1, dt * 15),
         );
-      if (leg.foot.distanceTo(ideal) > 1.4) leg.foot.copy(ideal);
       leg.swing = moving && swing;
       const hip = leg.hip.clone().applyMatrix4(this.root.matrixWorld);
-      if (hip.distanceTo(leg.foot) > 1.24) {
+      if (
+        !leg.recovery &&
+        (hip.distanceTo(leg.foot) > 1.24 || leg.foot.distanceTo(ideal) > 1.4)
+      ) {
         const density =
           surface && this.contactDensity
             ? this.contactDensity
             : (x, y, z) => this.height(x, z) - y;
-        const reachable = reachableFoot(density, hip, ideal);
-        if (reachable) {
-          leg.foot.copy(reachable);
-          leg.target.copy(reachable);
-          leg.start.copy(reachable);
+        const reachable = reachableFoot(
+          density,
+          hip,
+          ideal,
+          1.24,
+          right.clone().multiplyScalar(leg.side),
+        );
+        if (reachable && reachable.distanceTo(leg.foot) > 0.06) {
+          leg.recovery = {
+            start: leg.foot.clone(),
+            target: reachable,
+            normal: normal.clone(),
+            elapsed: 0,
+          };
+        }
+      }
+      if (leg.recovery) {
+        const step = leg.recovery;
+        step.elapsed += dt;
+        leg.foot.copy(
+          recoveryStep(step.start, step.target, step.normal, step.elapsed),
+        );
+        this.recoveringFeet++;
+        if (step.elapsed >= 0.18) {
+          leg.target.copy(step.target);
+          leg.start.copy(step.target);
+          leg.recovery = null;
+          leg.swing = false;
         }
       }
       const requestedAnkle = leg.foot.clone().addScaledVector(normal, 0.065);

@@ -141,3 +141,11 @@ The rendered femur and tibia now retain their 0.66-unit lengths even when a requ
 All 41 tests pass, including fixed bone lengths for overextended/collapsed targets, parallel bend directions, replacement contacts on floors/walls/ceilings and an explicitly unreachable floor. Lint and production build pass. Production-preview inspection restored the extreme store-wall stance (lift 0.471, pitch -0.45). Runtime measurements showed no clamped unreachable ankles in that sampled stance and maximum segment-length error of 1.1e-15; the browser showed approximately 60 FPS and no captured warnings/errors.
 
 Fixed lengths do not prove a physically supported stance. Contact search can relocate a foot abruptly, independent leg searches may produce awkward crossings, and body movement does not yet require a valid support set. The inspected front-leg arrangement is still awkward near the head. Whole-gait transition checks and support-aware body motion remain necessary.
+
+## Recovery steps and leg-side contact bounds
+
+Unreachable-foot replacement now follows a 0.18-second lifted recovery step instead of copying the foot instantly. Contacts must remain at least 0.1 units outward of the hip along the leg's own side direction. The older large-drift teleport uses the same recovery path. Tiny replacement changes are ignored. Fixed segment lengths remain enforced throughout recovery.
+
+Initial browser inspection exposed an idle recovery loop: repeatedly projecting a planted foot could send it to another patch of soil. Idle projection now runs only when the foot is clearly away from the surface. After reload and settling at the saved extreme wall stance, telemetry showed zero active recoveries and segment-length error around 1e-15. One foot remained unreachable under the new side constraint; its limb stayed finite. That is an exposed support gap, not a supported six-foot pose. No warnings/errors were captured in the initial browser pass.
+
+All 43 tests, lint and production build pass. New tests cover outward-side contact selection and a wall-relative lifted recovery trajectory with exact endpoints. Multi-leg recovery scheduling, collision along swing arcs, foot-to-foot separation and body motion constrained by actual support are still outstanding; this does not claim a complete coordinated gait.

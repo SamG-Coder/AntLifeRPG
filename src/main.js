@@ -712,6 +712,7 @@ renderer.setAnimationLoop(() => {
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
       feet: {
+        recovering: player.recoveringFeet,
         unreachable: player.unreachableFeet,
         maxSegmentError: player.maxLegLengthError,
       },
