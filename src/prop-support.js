@@ -38,3 +38,33 @@ export function supportedBodyHeight(
   }
   return result;
 }
+
+// Only the descent is eased: rising must immediately preserve clearance.
+// Existing stance ankles cap the delay so smoothing cannot stretch their legs.
+export function settleGroundHeight(
+  previous,
+  required,
+  dt,
+  reachCeiling = Infinity,
+) {
+  const eased =
+    required + Math.max(0, previous - required) * Math.exp(-12 * dt);
+  const result = Math.max(required, Math.min(eased, reachCeiling));
+  return result - required < 0.001 ? required : result;
+}
+
+export function stanceHeightCeiling(x, z, quaternion, legs, reach = 1.24) {
+  let ceiling = Infinity;
+  const hip = new Vector3();
+  for (const leg of legs) {
+    if (leg.swing || leg.recovery) continue;
+    hip.copy(leg.hip).applyQuaternion(quaternion);
+    const horizontalSq =
+      (x + hip.x - leg.foot.x) ** 2 + (z + hip.z - leg.foot.z) ** 2;
+    ceiling = Math.min(
+      ceiling,
+      leg.foot.y - hip.y + Math.sqrt(Math.max(0, reach * reach - horizontalSq)),
+    );
+  }
+  return ceiling;
+}

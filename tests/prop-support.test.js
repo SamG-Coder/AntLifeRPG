@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Mesh, SphereGeometry, Quaternion, Vector3 } from "three/webgpu";
-import { ellipsoidTop, supportedBodyHeight } from "../src/prop-support.js";
+import {
+  ellipsoidTop,
+  supportedBodyHeight,
+  settleGroundHeight,
+  stanceHeightCeiling,
+} from "../src/prop-support.js";
 import { cameraEllipsoid } from "../src/camera-props.js";
 import { bodySamples } from "../src/body-clearance.js";
 
@@ -23,6 +28,32 @@ test("seed upper contacts stay on a rotated non-uniform ellipsoid", () => {
     assert.ok(solid(x, y + 0.01, z) < 0);
   }
   assert.equal(top(10, 10), -Infinity);
+});
+
+test("ground descent settles over time while preserving clearance and stance reach", () => {
+  const legs = [
+    { hip: new Vector3(0.2, 0.45, 0), foot: new Vector3(1.03, 0, 0) },
+  ];
+  const rotation = new Quaternion();
+  const ceiling = stanceHeightCeiling(0, 0, rotation, legs);
+  let y = settleGroundHeight(0.6, 0, 1 / 60, ceiling);
+  assert.ok(y > 0 && y < 0.6);
+  assert.ok(new Vector3(0.2, y + 0.45, 0).distanceTo(legs[0].foot) <= 1.240001);
+  for (let i = 0; i < 90; i++) {
+    const next = settleGroundHeight(y, 0, 1 / 60, ceiling);
+    assert.ok(next <= y && next >= 0);
+    y = next;
+  }
+  assert.equal(y, 0);
+  assert.equal(settleGroundHeight(0, 0.6, 1 / 60, ceiling), 0.6);
+  legs[0].swing = true;
+  assert.equal(stanceHeightCeiling(0, 0, rotation, legs), Infinity);
+});
+
+test("unconstrained settling is independent of frame subdivision", () => {
+  const one = settleGroundHeight(0.6, 0.1, 0.1);
+  const two = settleGroundHeight(settleGroundHeight(0.6, 0.1, 0.05), 0.1, 0.05);
+  assert.ok(Math.abs(one - two) < 1e-12);
 });
 
 test("ground posture lifts the sampled body clear of a seed pile without raising bare-floor posture", () => {

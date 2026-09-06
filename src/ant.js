@@ -5,7 +5,11 @@ import { setSegment, solveLeg } from "./math.js";
 import { reachableFoot, recoveryStep } from "./foot-contact.js";
 import { canStartRecovery } from "./support.js";
 import { projectContact } from "./contact.js";
-import { supportedBodyHeight } from "./prop-support.js";
+import {
+  supportedBodyHeight,
+  settleGroundHeight,
+  stanceHeightCeiling,
+} from "./prop-support.js";
 import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
 const shell = new T.MeshStandardMaterial({
@@ -227,14 +231,21 @@ export class Ant {
     );
     if (surface && !this.wasAttached)
       this.root.quaternion.setFromRotationMatrix(basis);
-    if (!surface)
-      this.root.position.y = supportedBodyHeight(
+    if (!surface) {
+      const required = supportedBodyHeight(
         x,
         z,
         this.root.position.y,
         this.root.quaternion,
         this.height,
       );
+      this.root.position.y = settleGroundHeight(
+        this.wasAttached ? required : this.previous.y,
+        required,
+        dt,
+        stanceHeightCeiling(x, z, this.root.quaternion, this.legs),
+      );
+    }
     // Posture changes must not advance walking phases or lift planted feet.
     const travel = groundTravel;
     const turn =
