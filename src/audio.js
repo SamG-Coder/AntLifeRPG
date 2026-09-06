@@ -1,0 +1,4 @@
+export class AudioSystem{
+ start(){if(this.context)return;this.context=new AudioContext();const length=this.context.sampleRate*4;const b=this.context.createBuffer(1,length,this.context.sampleRate),d=b.getChannelData(0);let last=0;for(let i=0;i<length;i++){last=(last+(Math.random()*2-1)*.018)/1.019;d[i]=last;}const source=this.context.createBufferSource();source.buffer=b;source.loop=true;const gain=this.context.createGain();gain.gain.value=.09;source.connect(gain).connect(this.context.destination);source.start();}
+ click(dig=false){if(!this.context)return;const c=this.context,o=c.createOscillator(),g=c.createGain();o.type='triangle';o.frequency.setValueAtTime(dig?130:350,c.currentTime);o.frequency.exponentialRampToValueAtTime(35,c.currentTime+.09);g.gain.setValueAtTime(.035,c.currentTime);g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.1);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+.11);}
+}
