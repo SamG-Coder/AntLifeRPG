@@ -349,3 +349,13 @@ A single contextual identity card now follows the nearest nearby worker whose pr
 All 92 existing tests, lint and build pass. Browser inspection in the crowded fern sleeping chamber showed Ash's card, role and relationship above the worker, matching the E greeting prompt. Pressing G produced recognition feedback from Ash. The activity text changed with the worker's shift. No warnings/errors were captured; the inspected scene ran near 60 FPS.
 
 This is contextual recognition UI using the existing approximate scent-path query and projected body location. It does not distinguish workers with new body markings, ray-test every intervening decorative object, or add new relationship progression. Dense worker overlap and the broader animation/collision limitations remain visible.
+
+## Resting rows with a central aisle
+
+The resting chambers now arrange twelve beds in two rows, with consistent headings toward a central aisle. Chambers expand to contain the full nominal foot footprint, and leaf beds share the assigned orientation. Idle workers smoothly turn toward their resting heading. Bed approaches pass through the aisle, and chamber-to-store scent routes use an aisle exit waypoint instead of cutting straight across the beds. Existing idle saves migrate by walking to the revised assigned places.
+
+All 94 tests, lint and build pass, including the 20-day food regression and completed nursery delivery checks. New checks cover the Blender-derived body samples and six nominal feet staying on walkable ground with more than 1.2 units of half-aisle clearance, and bidirectional aisle exit waypoints. The older circular root-separation test was replaced by aligned full-leg-width/body-length bounds because rest headings are now constrained; connected route sampling remains.
+
+Browser inspection resumed the previously crowded fern chamber save. Workers settled into two facing rows, leaving a visibly clearer middle around the player. No warnings/errors were captured and the inspected scene ran near 60 FPS. The player then followed the store scent through the revised route.
+
+This changes resting layout, heading and place-route waypoints. It does not implement oriented body collision, leg collision, collision-safe turning, or universal crowd avoidance. The separate parcel-visibility route planner still uses static ground rather than occupied-bed footprints. Close contact during arrivals, greetings or manual movement can still occur.

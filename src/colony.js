@@ -1,6 +1,6 @@
 import { scentRoute } from "./navigation.js";
 import { updateNeeds, breakReason, onDuty } from "./daily-life.js";
-import { restingPlace } from "./colony-layout.js";
+import { restingPlace, restingChambers } from "./colony-layout.js";
 import { startGrooming, advanceGrooming } from "./grooming.js";
 import { updateWorkerEncounters } from "./colony-social.js";
 import { nurseryWaitingPlace, reserveExcavationCell } from "./work-layout.js";
@@ -32,7 +32,11 @@ function restAwayFromWork(n) {
   const place = restingPlace(n.id);
   if (n.breakReason === "meal") go(n, "store");
   else {
-    go(n, place.chamber, { x: place.x, z: place.z });
+    go(n, place.chamber);
+    n.path.push(
+      { x: place.x, z: restingChambers[place.chamber].z },
+      { x: place.x, z: place.z },
+    );
   }
   n.cell = null;
   n.task = "off-duty";
@@ -120,7 +124,11 @@ export function updateColony(
       if (n.destination !== expected) restAwayFromWork(n);
       else if (expected !== "store" && !n.path?.length) {
         const bed = restingPlace(n.id);
-        if (distance(n, bed) > 0.35) n.path = [{ x: bed.x, z: bed.z }];
+        if (distance(n, bed) > 0.35)
+          n.path = [
+            { x: bed.x, z: restingChambers[bed.chamber].z },
+            { x: bed.x, z: bed.z },
+          ];
       }
     }
     if (n.wait > 0) {

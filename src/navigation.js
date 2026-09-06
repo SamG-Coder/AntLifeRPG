@@ -1,4 +1,5 @@
 import { sites, distance } from "./simulation.js";
+import { restingChambers, restingExit } from "./colony-layout.js";
 const links = {
   home: ["store"],
   store: ["home", "dig", "surface", "westRest", "eastRest"],
@@ -19,7 +20,15 @@ export function scentRoute(position, destination) {
     const path = queue.shift(),
       node = path.at(-1);
     if (node === destination) {
-      const route = path.map((n) => ({ ...sites[n] }));
+      const route = [];
+      for (let i = 0; i < path.length; i++) {
+        const name = path[i],
+          next = path[i + 1];
+        route.push({ ...sites[name] });
+        if (!next) continue;
+        if (restingChambers[name]) route.push(restingExit(name));
+        else if (restingChambers[next]) route.push(restingExit(next));
+      }
       if (destination === "dig") route.push({ x: -14, z: -27 });
       return route;
     }

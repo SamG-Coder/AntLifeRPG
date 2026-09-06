@@ -50,8 +50,8 @@ const paths = [
 export function field(x, z) {
   let d = Infinity;
   for (const [name, radius] of [
-    ["westRest", 6.5],
-    ["eastRest", 6.5],
+    ["westRest", 8],
+    ["eastRest", 8],
     ["home", 6],
     ["store", 6],
     ["dig", 6],
@@ -445,7 +445,7 @@ export function buildWorld(scene, state) {
   leaf(1, 0.05, -14, 2.7, 0.6);
   for (let id = 0; id < 24; id++) {
     const p = restingPlace(id);
-    const angle = id * 2.39996;
+    const angle = p.yaw;
     leaf(
       p.x - Math.sin(angle) * 0.825,
       height(p.x, p.z) + 0.025,

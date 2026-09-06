@@ -20,6 +20,7 @@ import { gardenCapacity } from "./food-supply.js";
 import { ensureBedding, beddingCount } from "./bedding.js";
 import { leafScrapGeometry } from "./leaf-scrap.js";
 import { applyItemAppearance } from "./item-appearance.js";
+import { restingPlace } from "./colony-layout.js";
 import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
@@ -799,13 +800,26 @@ renderer.setAnimationLoop(() => {
       n.encounterRemaining > 0
         ? state.npcs.find((other) => other.id === n.encounterPartner)
         : null;
-    const yaw = partner
+    let yaw = partner
       ? Math.atan2(n.x - partner.x, n.z - partner.z)
       : n.greetingRemaining > 0
         ? Math.atan2(n.x - state.player.x, n.z - state.player.z)
         : moving
           ? Math.atan2(-(n.x - a.root.position.x), -(n.z - a.root.position.z))
           : (a.yaw ?? 0);
+    if (
+      !partner &&
+      !(n.greetingRemaining > 0) &&
+      n.task === "off-duty" &&
+      !n.path?.length
+    ) {
+      const target = restingPlace(n.id).yaw;
+      const current = a.yaw ?? target;
+      yaw =
+        current +
+        Math.atan2(Math.sin(target - current), Math.cos(target - current)) *
+          Math.min(1, dt * 3);
+    }
     const resting =
       n.task === "off-duty" &&
       !n.path?.length &&

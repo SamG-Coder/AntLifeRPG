@@ -9,9 +9,16 @@ test("all resting places have body clearance and connected walkable routes", () 
   const places = Array.from({ length: 24 }, (_, i) => restingPlace(i));
   for (const [i, p] of places.entries()) {
     assert.ok(field(p.x, p.z) < -1.4);
-    for (const q of places.slice(i + 1)) assert.ok(distance(p, q) > 2.6);
+    // Resting headings are parallel to Z: use full leg width and body length.
+    for (const q of places.slice(i + 1))
+      assert.ok(Math.abs(p.x - q.x) > 2.06 || Math.abs(p.z - q.z) > 2.62);
     for (const origin of Object.values(sites)) {
-      const route = [origin, ...scentRoute(origin, p.chamber), p];
+      const route = [
+        origin,
+        ...scentRoute(origin, p.chamber),
+        { x: p.x, z: sites[p.chamber].z },
+        p,
+      ];
       for (let j = 1; j < route.length; j++)
         for (let t = 0; t <= 1; t += 0.02) {
           const a = route[j - 1],
