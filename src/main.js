@@ -239,9 +239,7 @@ function nearby() {
     };
   if (distance(p, sites.store) < 2.5)
     return { kind: "eat", text: "E · Eat from the communal store" };
-  const npc = state.npcs
-    .filter((n) => distance(p, n) < 2 && canExchangeScents(p, n))
-    .sort((a, b) => distance(p, a) - distance(p, b))[0];
+  const npc = visibleWorker(2);
   if (npc)
     return {
       kind: "social",
@@ -297,6 +295,29 @@ function interact() {
 function canExchangeScents(a, b) {
   return clearScentPath(a, b, world.solidDensity, world.walkHeight);
 }
+function workerScreenPoint(n) {
+  return new T.Vector3(n.x, world.walkHeight(n.x, n.z) + 1.3, n.z).project(
+    camera,
+  );
+}
+function visibleWorker(range) {
+  return state.npcs
+    .filter((n) => {
+      if (
+        distance(n, state.player) >= range ||
+        !canExchangeScents(state.player, n)
+      )
+        return false;
+      const point = workerScreenPoint(n);
+      return (
+        point.z > -1 &&
+        point.z < 1 &&
+        Math.abs(point.x) < 0.9 &&
+        Math.abs(point.y) < 0.8
+      );
+    })
+    .sort((a, b) => distance(a, state.player) - distance(b, state.player))[0];
+}
 function greetWorker(npc) {
   if (surfaceFrame) return;
   if (!npc) {
@@ -305,6 +326,7 @@ function greetWorker(npc) {
   }
   const fresh = greet(state, npc, canExchangeScents);
   if (fresh === null) return;
+  route = [];
   toast(
     fresh
       ? `${npc.name} pauses for an antennal exchange. Stay nearby while you exchange scents.`
@@ -601,17 +623,7 @@ addEventListener("keydown", (e) => {
   }
   if (e.code === "KeyV" && surfaceFrame) gripCruise = !gripCruise;
   if (e.code === "KeyW" || e.code === "KeyS") gripCruise = false;
-  if (e.code === "KeyG")
-    greetWorker(
-      state.npcs
-        .filter(
-          (n) =>
-            distance(n, state.player) < 2 && canExchangeScents(state.player, n),
-        )
-        .sort(
-          (a, b) => distance(a, state.player) - distance(b, state.player),
-        )[0],
-    );
+  if (e.code === "KeyG") greetWorker(visibleWorker(2));
   if (e.code === "KeyQ") dig();
   if (e.code === "KeyR") rest();
 });
@@ -815,6 +827,21 @@ renderer.setAnimationLoop(() => {
     );
   }
   rig.update(state.player, dt, player.root.position.y);
+  const focus =
+    started && !surfaceFrame && !$("journal").open ? visibleWorker(4) : null;
+  $("worker-focus").hidden = !focus;
+  if (focus) {
+    const point = workerScreenPoint(focus);
+    $("worker-focus").style.left = `${(point.x * 0.5 + 0.5) * innerWidth}px`;
+    $("worker-focus").style.top =
+      `${(-point.y * 0.5 + 0.5) * innerHeight - 12}px`;
+    $("worker-name").textContent = focus.name;
+    $("worker-identity").textContent = `${focus.role} · ${relationship(focus)}`;
+    $("worker-activity").textContent =
+      focus.greetingRemaining > 0
+        ? "Exchanging scents with you"
+        : `${activityLabel(focus)} · ${distance(focus, state.player) < 2 ? "G to greet" : "Move closer to greet"}`;
+  }
   if (state.items.some((item) => item.fallHeight > 0)) syncItems();
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
   updateDaylight(scene, sun, ambient, state.time);

@@ -341,3 +341,11 @@ The simulation owns greeting advancement and completion before worker scheduling
 All 92 tests pass, along with lint/build. Tests cover a solid slab preventing a start, contact becoming blocked, walking away, no early reward, one daily reward, and resuming a conserved owned delivery. Browser playtesting walked to the fern sleeping chamber, started an exchange with Ash and inspected the shared-memory record afterward. No warnings/errors were captured. The short countdown had already elapsed by the subsequent UI inspection, so that inspection verifies completed feedback/state rather than an observed countdown animation.
 
 The scent path uses the existing approximate head-height ray. This is not exact antenna-to-antenna contact, a full social dialogue system, or a change to the relationship progression thresholds.
+
+## In-world worker recognition
+
+A single contextual identity card now follows the nearest nearby worker whose projected position is on screen and whose scent path is unobstructed. It shows name, role, existing player relationship, current activity and whether greeting range has been reached. It hides in field notes and during surface grip. E's social target and G's target use the same visible-worker selection. An accepted greeting also stops a followed scent trail so automatic walking does not immediately cancel the exchange.
+
+All 92 existing tests, lint and build pass. Browser inspection in the crowded fern sleeping chamber showed Ash's card, role and relationship above the worker, matching the E greeting prompt. Pressing G produced recognition feedback from Ash. The activity text changed with the worker's shift. No warnings/errors were captured; the inspected scene ran near 60 FPS.
+
+This is contextual recognition UI using the existing approximate scent-path query and projected body location. It does not distinguish workers with new body markings, ray-test every intervening decorative object, or add new relationship progression. Dense worker overlap and the broader animation/collision limitations remain visible.

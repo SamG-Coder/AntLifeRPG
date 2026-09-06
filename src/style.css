@@ -255,6 +255,42 @@ button {
   transition: opacity 0.5s;
   text-align: center;
 }
+#worker-focus {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  max-width: 230px;
+  padding: 9px 13px;
+  background: #152014e8;
+  border: 1px solid #b9c58c65;
+  border-radius: 3px;
+  text-align: center;
+  font-size: 11px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+#worker-focus::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 12px;
+  background: #b9c58c;
+}
+#worker-focus strong,
+#worker-focus span {
+  display: block;
+}
+#worker-name {
+  color: #eee9ce;
+  font-size: 15px;
+}
+#worker-identity {
+  color: #c6bd93;
+}
+#worker-activity {
+  color: #aebfa2;
+}
 dialog {
   pointer-events: auto;
   background: #182016f5;
