@@ -149,3 +149,13 @@ Unreachable-foot replacement now follows a 0.18-second lifted recovery step inst
 Initial browser inspection exposed an idle recovery loop: repeatedly projecting a planted foot could send it to another patch of soil. Idle projection now runs only when the foot is clearly away from the surface. After reload and settling at the saved extreme wall stance, telemetry showed zero active recoveries and segment-length error around 1e-15. One foot remained unreachable under the new side constraint; its limb stayed finite. That is an exposed support gap, not a supported six-foot pose. No warnings/errors were captured in the initial browser pass.
 
 All 43 tests, lint and production build pass. New tests cover outward-side contact selection and a wall-relative lifted recovery trajectory with exact endpoints. Multi-leg recovery scheduling, collision along swing arcs, foot-to-foot separation and body motion constrained by actual support are still outstanding; this does not claim a complete coordinated gait.
+
+## Climbing foothold feasibility and recovery scheduling
+
+Each proposed climbing translation now searches six body-pose-relative footholds against the detailed solid field. Movement requires at least three reachable contacts distributed over both sides; a turn is also rejected if its candidate pose lacks that distribution. This prevents the body-clearance check alone from admitting a one-sided ledge pose. It is a geometric feasibility condition, not measured planted support, a support polygon, adhesion force or torque simulation.
+
+Recovery steps are limited to one active step at a time per ant. During walking they may begin only in the currently swinging group; idle ants recover one foot at a time. A recovery may still span a gait phase boundary, so this does not guarantee three physically planted feet throughout every transition.
+
+All 46 tests, lint and production build pass. New tests cover six footholds on floor/ceiling poses, rejection of a body-clear one-sided ledge, and recovery scheduling. The original sphere and actual nest floor-to-ceiling traversal tests still pass. A fresh production-preview colony was played from the home floor through attached traversal onto the ceiling: telemetry recorded y=3.78, normal.y=-0.97, one recovery and zero unreachable ankles. After pausing, recovery settled to zero, segment error remained around 3.3e-16, and no browser warnings/errors were captured. The observed session ran near 60 FPS; broad performance remains unverified.
+
+Remaining support work includes coupling body movement to actual stance feet, distinct/non-collinear contacts, contact forces, slip/fall behavior, recovery completion relative to gait phase, and swing collision.

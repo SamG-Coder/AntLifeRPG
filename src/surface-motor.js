@@ -1,6 +1,7 @@
 import { Vector3 } from "three/webgpu";
 import { projectContact, transportHeading } from "./contact.js";
 import { bodyPenetration, fitBodyClearance } from "./body-clearance.js";
+import { surfaceSupport } from "./support.js";
 
 export function attachSurface(density, position, forward) {
   const contact = projectContact(density, position, { maxTravel: 0.8 });
@@ -28,12 +29,16 @@ export function moveOnSurface(
   };
   const penetration = (f) => bodyPenetration(solidDensity, f);
   result = fitBodyClearance(solidDensity, result) ?? result;
-  if (penetration(result) > Math.max(0.025, penetration(frame) + 1e-5)) {
+  if (
+    penetration(result) > Math.max(0.025, penetration(frame) + 1e-5) ||
+    (turn && !surfaceSupport(solidDensity, result).supported)
+  ) {
     result.forward.copy(frame.forward);
     result.bodyLift = frame.bodyLift ?? 0;
     result.bodyPitch = frame.bodyPitch ?? 0;
     result = fitBodyClearance(solidDensity, result) ?? result;
   }
+  if (!distance) return result;
   const steps = Math.max(1, Math.ceil(Math.abs(distance) / 0.04));
   for (let i = 0; i < steps; i++) {
     const candidate = result.position
@@ -54,6 +59,7 @@ export function moveOnSurface(
     };
     next = fitBodyClearance(solidDensity, next) ?? next;
     if (penetration(next) > Math.max(0.025, penetration(result) + 1e-5)) break;
+    if (!surfaceSupport(solidDensity, next).supported) break;
     result = next;
   }
   return result;

@@ -3,6 +3,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { setSegment, solveLeg } from "./math.js";
 import { reachableFoot, recoveryStep } from "./foot-contact.js";
+import { canStartRecovery } from "./support.js";
 import { projectContact } from "./contact.js";
 import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
@@ -288,7 +289,15 @@ export class Ant {
           1.24,
           right.clone().multiplyScalar(leg.side),
         );
-        if (reachable && reachable.distanceTo(leg.foot) > 0.06) {
+        if (
+          reachable &&
+          reachable.distanceTo(leg.foot) > 0.06 &&
+          canStartRecovery(
+            this.legs,
+            this.legs.indexOf(leg),
+            travel > 0.0001 || turn > 0.002,
+          )
+        ) {
           leg.recovery = {
             start: leg.foot.clone(),
             target: reachable,
