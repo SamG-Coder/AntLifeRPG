@@ -29,6 +29,8 @@ Nearby workers occasionally pause to exchange scents when the soil between them 
 
 The player can traverse nest-soil walls and ceilings with an oriented camera and saved attachment state. Grip currently excludes roots, rocks and foliage; workers still follow ground routes. Tight transitions and excavation clearance need further refinement.
 
+Stored seeds provide upper-surface footholds for the player and workers. Ground posture raises the sampled body over the pile, and the camera follows that height. Seed envelopes also participate in grip contacts. This is kinematic contact with a static pile; movable-seed physics and full limb collision remain outstanding.
+
 This is an early prototype, not the finished vertical slice or the final graphical quality target. Universal climbing, full soil stability, mature schedules/relationships, cooperative hauling, leisure, home furnishing, quality presets and broad performance validation are still outstanding. See [the critical iteration log](docs/iteration-log.md).
 
 Actual gameplay renderer capture, with HTML HUD omitted; no retouching or generated imagery:

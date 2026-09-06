@@ -5,6 +5,7 @@ import { setSegment, solveLeg } from "./math.js";
 import { reachableFoot, recoveryStep } from "./foot-contact.js";
 import { canStartRecovery } from "./support.js";
 import { projectContact } from "./contact.js";
+import { supportedBodyHeight } from "./prop-support.js";
 import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
 const shell = new T.MeshStandardMaterial({
@@ -111,6 +112,7 @@ export class Ant {
     this.phase = 0;
     this.legs = [];
     this.height = height;
+    this.terrainHeight = height;
     this.limbBatch = limbBatch(scene);
     for (let side = -1; side <= 1; side += 2)
       for (let i = 0; i < 3; i++) {
@@ -185,7 +187,11 @@ export class Ant {
       this.feelers[i].rotation.x +=
         this.groomBlend * (0.45 + Math.sin(this.animationTime * 5 + i) * 0.12);
     }
-    this.root.position.set(x, this.height(x, z) - this.restBlend * 0.1, z);
+    this.root.position.set(
+      x,
+      this.terrainHeight(x, z) - this.restBlend * 0.1,
+      z,
+    );
     if (surface)
       this.root.position
         .copy(surface.position)
@@ -195,9 +201,11 @@ export class Ant {
     const normal = surface
       ? surface.normal.clone()
       : new T.Vector3(
-          this.height(x - epsilon, z) - this.height(x + epsilon, z),
+          this.terrainHeight(x - epsilon, z) -
+            this.terrainHeight(x + epsilon, z),
           epsilon * 2,
-          this.height(x, z - epsilon) - this.height(x, z + epsilon),
+          this.terrainHeight(x, z - epsilon) -
+            this.terrainHeight(x, z + epsilon),
         ).normalize();
     const forward = surface
       ? surface.forward.clone()
@@ -219,6 +227,14 @@ export class Ant {
     );
     if (surface && !this.wasAttached)
       this.root.quaternion.setFromRotationMatrix(basis);
+    if (!surface)
+      this.root.position.y = supportedBodyHeight(
+        x,
+        z,
+        this.root.position.y,
+        this.root.quaternion,
+        this.height,
+      );
     // Posture changes must not advance walking phases or lift planted feet.
     const travel = groundTravel;
     const turn =

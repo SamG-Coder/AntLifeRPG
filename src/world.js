@@ -3,6 +3,7 @@ import { random, capsuleBetween } from "./math.js";
 import { sites } from "./simulation.js";
 import { implicitMesh } from "./terrain.js";
 import { cameraEllipsoid, cameraCapsule } from "./camera-props.js";
+import { ellipsoidTop } from "./prop-support.js";
 import { leafTexture } from "./foliage.js";
 import { restingPlace } from "./colony-layout.js";
 import {
@@ -112,6 +113,8 @@ function soilTexture() {
 }
 export function buildWorld(scene, state) {
   const cameraProps = [];
+  const seedTops = [],
+    seedSolids = [];
   const texture = soilTexture();
   const soil = new T.MeshStandardMaterial({
     color: 0xb79b71,
@@ -504,7 +507,10 @@ export function buildWorld(scene, state) {
     );
     m.scale.set(1, 0.7, 1.9);
     m.rotation.y = rng() * 6;
-    cameraProps.push(cameraEllipsoid(m));
+    const solid = cameraEllipsoid(m);
+    cameraProps.push(solid);
+    seedSolids.push(solid);
+    seedTops.push(ellipsoidTop(m));
     m.castShadow = true;
     scene.add(m);
   }
@@ -617,7 +623,20 @@ export function buildWorld(scene, state) {
     }),
   );
   scene.add(dust);
+  const seedDensity = (x, y, z) => {
+    if (Math.abs(x) > 2.1 || Math.abs(z + 14) > 2.1) return -1;
+    let density = -1;
+    for (const solid of seedSolids) density = Math.max(density, solid(x, y, z));
+    return density;
+  };
+  const walkHeight = (x, z) => {
+    let top = height(x, z);
+    if (Math.abs(x) <= 2.1 && Math.abs(z + 14) <= 2.1)
+      for (const support of seedTops) top = Math.max(top, support(x, z));
+    return top;
+  };
   return {
+    walkHeight,
     digCells,
     soil,
     seedMat,
@@ -636,12 +655,17 @@ export function buildWorld(scene, state) {
       return density;
     },
     contactDensity: (x, y, z) =>
-      Math.max(climbDensity(x, y, z), excavationField(x, y, z)),
+      Math.max(
+        climbDensity(x, y, z),
+        excavationField(x, y, z),
+        seedDensity(x, y, z),
+      ),
     solidDensity: (x, y, z) =>
       Math.max(
         caveDensity(x, y, z),
         height(x, z) - y,
         excavationField(x, y, z),
+        seedDensity(x, y, z),
       ),
   };
 }

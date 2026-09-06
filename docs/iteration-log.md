@@ -205,3 +205,11 @@ All 57 tests, lint and production build pass. Tests cover an intervening soil sl
 This is a sampled soil clearance check, not a precise antenna-contact pose or a biological scent propagation model. Decorative props and other ants do not obstruct the exchange path. Familiarity still has no assistance, shared leisure or conflict consequences.
 
 After closing the journal, live simulation increased completed worker bonds from two to four while soil deliveries rose from 26 to 28. The store screenshot still shows the player overlapping decorative seeds, confirming the separate ground-prop locomotion collision gap.
+
+## Store-seed foot contacts and ground body clearance
+
+The static store seeds now provide analytic upper-surface contacts derived from their transformed sphere geometry. Player and worker feet use those heights; sampled body clearance raises their ground posture over the pile while retaining the underlying terrain orientation. The camera follows the actual rendered body height in both modes. Seed envelopes also join the grip contact and detailed solid fields, and grip engagement/release uses the local support height.
+
+All 59 tests, lint and production build pass. New tests verify rotated/non-uniform ellipsoid contacts, sampled body clearance over a seed, and unchanged bare-floor posture. Production-preview playtesting restored the formerly overlapping store pose, walked home and returned onto the pile. Returned telemetry recorded ground body lift 0.5404, zero unreachable feet and segment error about 3.3e-16. First-person rendering was inspected. Grip engaged at seed height 0.5443 with normal.y 0.8852 and settled to six planted feet, no recovery and no unreachable feet; release was then requested. The inspected session ran near 60 FPS and captured no warnings/errors.
+
+This is kinematic support over a static pile, not granular or rigid-body seed physics. Body samples do not prove full mesh clearance, and upper-surface placement is not swept limb collision or force-based support. Abrupt height changes can still produce abrupt body adjustments. Other props, movable cargo, foliage and NPC bodies remain outside this ground support field; broader seed-grip traversal and worker close-up animation verification remain outstanding.

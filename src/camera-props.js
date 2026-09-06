@@ -1,7 +1,7 @@
 import { Vector3 } from "three/webgpu";
 
-// Camera-only envelopes. They preserve orientation/non-uniform scale without
-// adding decorative objects to the ant's locomotion field.
+// Implicit envelopes preserve orientation/non-uniform scale. All registered
+// props obstruct the camera; the store seeds also feed locomotion contacts.
 export function cameraEllipsoid(mesh) {
   mesh.updateWorldMatrix(true, false);
   mesh.geometry.computeBoundingSphere();

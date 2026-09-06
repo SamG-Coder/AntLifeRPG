@@ -42,15 +42,11 @@ export class CameraRig {
       { passive: true },
     );
   }
-  update(player, dt) {
+  update(player, dt, groundY = height(player.x, player.z)) {
     const surface = restoreFrame(player.attachment);
     const up = surface?.normal ?? new T.Vector3(0, 1, 0);
     this.camera.up.copy(up);
-    const target = new T.Vector3(
-      player.x,
-      height(player.x, player.z) + 0.63,
-      player.z,
-    );
+    const target = new T.Vector3(player.x, groundY + 0.63, player.z);
     if (surface)
       target
         .copy(surface.position)

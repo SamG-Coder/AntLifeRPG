@@ -124,10 +124,11 @@ const player = new Ant(
   scene,
   state.player.x,
   state.player.z,
-  height,
+  world.walkHeight,
   state.player.yaw,
 );
-const ants = state.npcs.map((n) => new Ant(scene, n.x, n.z, height));
+const ants = state.npcs.map((n) => new Ant(scene, n.x, n.z, world.walkHeight));
+for (const ant of [player, ...ants]) ant.terrainHeight = height;
 player.contactDensity = world.solidDensity;
 const rig = new CameraRig(camera, $("world"), world.cameraDensity);
 rig.yaw = state.player.yaw;
@@ -324,7 +325,8 @@ function rest() {
   state.player.energy = 100;
   for (let i = 0; i < 150; i++)
     tick(state, 1, {
-      canMeet: (a, b) => clearScentPath(a, b, world.solidDensity, height),
+      canMeet: (a, b) =>
+        clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });
   state.player.hunger = Math.max(0, state.player.hunger - 8);
   toast("Two quiet hours beneath the leaf. The colony carries on.");
@@ -497,7 +499,8 @@ addEventListener("keydown", (e) => {
       if (
         surfaceFrame.normal.y < 0.8 ||
         Math.abs(
-          surfaceFrame.position.y - height(state.player.x, state.player.z),
+          surfaceFrame.position.y -
+            world.walkHeight(state.player.x, state.player.z),
         ) > 0.35
       ) {
         toast("Keep your grip. Return to the ground before releasing.");
@@ -516,7 +519,7 @@ addEventListener("keydown", (e) => {
         world.contactDensity,
         new T.Vector3(
           state.player.x,
-          height(state.player.x, state.player.z),
+          world.walkHeight(state.player.x, state.player.z),
           state.player.z,
         ),
         new T.Vector3(-Math.sin(rig.yaw), 0, -Math.cos(rig.yaw)),
@@ -579,7 +582,8 @@ renderer.setAnimationLoop(() => {
   if (started && !$("journal").open) {
     const groomingBouts = state.player.groomingBouts ?? 0;
     tick(state, dt, {
-      canMeet: (a, b) => clearScentPath(a, b, world.solidDensity, height),
+      canMeet: (a, b) =>
+        clearScentPath(a, b, world.solidDensity, world.walkHeight),
     });
     if ((state.player.groomingBouts ?? 0) > groomingBouts)
       toast("Antennae clean. Ready for the next part of your day.");
@@ -721,7 +725,7 @@ renderer.setAnimationLoop(() => {
       n.groomRemaining > 0,
     );
   }
-  rig.update(state.player, dt);
+  rig.update(state.player, dt, player.root.position.y);
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
   updateDaylight(scene, sun, ambient, state.time);
   if (elapsed - lastHud > 0.2) {
@@ -771,6 +775,10 @@ renderer.setAnimationLoop(() => {
       triangles: renderer.info.render.triangles,
       x: state.player.x,
       z: state.player.z,
+      bodyY: player.root.position.y,
+      groundBodyLift: surfaceFrame
+        ? null
+        : player.root.position.y - height(state.player.x, state.player.z),
       removed: state.removed.length,
       items: state.items.length,
       carrying: state.player.carrying,
