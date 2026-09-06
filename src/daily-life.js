@@ -28,6 +28,7 @@ export function breakReason(worker, minutes) {
 }
 
 export function activityLabel(worker) {
+  if (worker.greetingRemaining > 0) return "Exchanging scents with you";
   if (worker.task === "off-duty") {
     if (worker.path?.length)
       return worker.breakReason === "meal"

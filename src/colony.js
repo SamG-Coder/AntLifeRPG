@@ -52,6 +52,11 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
       go(n, n.role === "forager" ? "surface" : "dig");
     }
     updateNeeds(n, dt);
+    if (n.greetingRemaining > 0) {
+      n.greetingRemaining = Math.max(0, n.greetingRemaining - dt);
+      if (distance(n, state.player) > 3) n.greetingRemaining = 0;
+      else continue;
+    }
     n.breakReason = breakReason(n, state.time);
     // An empty store must not strand every hungry forager in a food deadlock.
     if (

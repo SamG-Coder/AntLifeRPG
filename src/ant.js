@@ -34,10 +34,14 @@ export async function loadAnt() {
   const groups = new Map();
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
-    const key = o.material.uuid;
-    if (!groups.has(key))
-      groups.set(key, { material: o.material, geometries: [] });
     const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
+    geometry.computeBoundingBox();
+    const side = o.name.startsWith("Antenna")
+      ? Math.sign(geometry.boundingBox.getCenter(new T.Vector3()).x)
+      : 0;
+    const key = `${o.material.uuid}:${side}`;
+    if (!groups.has(key))
+      groups.set(key, { material: o.material, geometries: [], side });
     // Authored lofts have no UV unwrap; keep material batches attribute-compatible.
     if (!geometry.attributes.uv)
       geometry.setAttribute(
@@ -53,7 +57,15 @@ export async function loadAnt() {
     groups.get(key).geometries.push(geometry);
   });
   bodyTemplate = new T.Group();
-  for (const { material, geometries } of groups.values()) {
+  const antennaPivots = new Map();
+  for (const side of [-1, 1]) {
+    const pivot = new T.Group();
+    pivot.name = `antenna-${side}`;
+    pivot.position.set(side * 0.14, 0.66, -0.85);
+    antennaPivots.set(side, pivot);
+    bodyTemplate.add(pivot);
+  }
+  for (const { material, geometries, side } of groups.values()) {
     let renderedMaterial = material;
     if (material.name.includes("cuticle")) {
       renderedMaterial = new T.MeshStandardNodeMaterial();
@@ -72,13 +84,21 @@ export async function loadAnt() {
     const mesh = new T.Mesh(merged, renderedMaterial);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    bodyTemplate.add(mesh);
+    if (side) {
+      const pivot = antennaPivots.get(side);
+      merged.translate(-pivot.position.x, -pivot.position.y, -pivot.position.z);
+      pivot.add(mesh);
+    } else bodyTemplate.add(mesh);
   }
 }
 export class Ant {
   constructor(scene, x, z, height, yaw = 0) {
     this.root = new T.Group();
     this.body = bodyTemplate.clone();
+    this.feelers = [-1, 1].map((side) =>
+      this.body.getObjectByName(`antenna-${side}`),
+    );
+    this.animationTime = Math.abs(x * 1.7 + z * 0.4);
     this.root.add(this.body);
     scene.add(this.root);
     this.root.position.set(x, height(x, z), z);
@@ -121,7 +141,15 @@ export class Ant {
     this.cargo.visible = false;
     this.root.add(this.cargo);
   }
-  update(x, z, yaw, dt, carrying = false) {
+  update(x, z, yaw, dt, carrying = false, greeting = false) {
+    this.animationTime += dt;
+    for (let i = 0; i < this.feelers.length; i++) {
+      const t = this.animationTime;
+      this.feelers[i].rotation.y =
+        Math.sin(t * (greeting ? 5 : 1.8) + i * 2) * (greeting ? 0.28 : 0.08);
+      this.feelers[i].rotation.x =
+        Math.sin(t * (greeting ? 3.6 : 1.2) + i) * (greeting ? 0.12 : 0.04);
+    }
     this.root.position.set(x, this.height(x, z), z);
     this.yaw = yaw;
     const epsilon = 0.12;

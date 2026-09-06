@@ -135,6 +135,12 @@ export function remember(state, npc, event) {
   npc.trust += event === "shared-work" ? 2 : 1;
   return true;
 }
+export function greet(state, npc) {
+  if (distance(state.player, npc) >= 2 || npc.greetingRemaining > 0)
+    return null;
+  npc.greetingRemaining = 2.8;
+  return remember(state, npc, "greet");
+}
 export function relationship(npc) {
   return npc.trust >= 8
     ? "Work friend"

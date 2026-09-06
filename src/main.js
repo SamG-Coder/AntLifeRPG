@@ -18,7 +18,7 @@ import {
   excavate,
   pickup,
   deposit,
-  remember,
+  greet,
   relationship,
 } from "./simulation.js";
 const $ = (id) => document.getElementById(id);
@@ -219,14 +219,22 @@ function interact() {
     state.player.hunger = Math.min(100, state.player.hunger + 25);
     toast("Warm seed oils. You feel nourished.");
   } else if (n.kind === "social") {
-    const fresh = remember(state, n.npc, "greet");
-    toast(
-      fresh
-        ? `${n.npc.name} pauses for an antennal exchange. Your scent is remembered.`
-        : `${n.npc.name} recognises your scent. ${relationship(n.npc)}.`,
-    );
+    greetWorker(n.npc);
   } else if (n.kind === "home") rest();
   syncItems();
+}
+function greetWorker(npc) {
+  if (!npc) {
+    toast("Move closer to a worker to exchange scents.");
+    return;
+  }
+  const fresh = greet(state, npc);
+  if (fresh === null) return;
+  toast(
+    fresh
+      ? `${npc.name} pauses for an antennal exchange. Your scent is remembered.`
+      : `${npc.name} recognises your scent. ${relationship(npc)}.`,
+  );
 }
 function dig() {
   if (state.player.carrying !== null) {
@@ -399,6 +407,14 @@ addEventListener("keydown", (e) => {
     state.settings.firstPerson = rig.first;
   }
   if (e.code === "KeyE") interact();
+  if (e.code === "KeyG")
+    greetWorker(
+      state.npcs
+        .filter((n) => distance(n, state.player) < 2)
+        .sort(
+          (a, b) => distance(a, state.player) - distance(b, state.player),
+        )[0],
+    );
   if (e.code === "KeyQ") dig();
   if (e.code === "KeyR") rest();
 });
@@ -524,10 +540,13 @@ renderer.setAnimationLoop(() => {
       a = ants[i];
     const moving =
       Math.hypot(n.x - a.root.position.x, n.z - a.root.position.z) > 0.0002;
-    const yaw = moving
-      ? Math.atan2(-(n.x - a.root.position.x), -(n.z - a.root.position.z))
-      : (a.yaw ?? 0);
-    a.update(n.x, n.z, yaw, dt, !!n.cargo);
+    const yaw =
+      n.greetingRemaining > 0
+        ? Math.atan2(n.x - state.player.x, n.z - state.player.z)
+        : moving
+          ? Math.atan2(-(n.x - a.root.position.x), -(n.z - a.root.position.z))
+          : (a.yaw ?? 0);
+    a.update(n.x, n.z, yaw, dt, !!n.cargo, n.greetingRemaining > 0);
   }
   rig.update(state.player, dt);
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
