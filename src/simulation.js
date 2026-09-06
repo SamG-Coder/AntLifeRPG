@@ -117,12 +117,13 @@ export function excavate(state, cell, position) {
   state.items.push(item);
   return item;
 }
-export function pickup(state, item) {
+export function pickup(state, item, canReach = () => true) {
   if (
     state.player.carrying !== null ||
     item.deposited ||
     item.owner != null ||
-    item.fallHeight > 0
+    item.fallHeight > 0 ||
+    !canReach(item)
   )
     return false;
   state.player.carrying = item.id;
@@ -138,12 +139,13 @@ export function deliveryDestination(item, position) {
     return "store";
   return null;
 }
-export function deposit(state, position) {
+export function deposit(state, position, canPlace = () => true) {
   const item = state.items.find((i) => i.id === state.player.carrying);
-  if (!item) return false;
+  if (!item || !canPlace(item, position)) return false;
   item.x = position.x;
   item.z = position.z;
   item.y = position.y ?? 0;
+  item.supportOffset = position.supportOffset ?? 0;
   state.player.carrying = null;
   const destination = deliveryDestination(item, position);
   if (item.kind === "leaf") item.homePlaced = destination === "home";
@@ -227,6 +229,10 @@ export function validateState(state) {
       (i) =>
         i &&
         Number.isInteger(i.id) &&
+        (i.supportOffset === undefined ||
+          (Number.isFinite(i.supportOffset) &&
+            i.supportOffset >= 0 &&
+            i.supportOffset <= 10)) &&
         [i.x, i.z].every(Number.isFinite) &&
         ["soil", "seed", "leaf"].includes(i.kind),
     ) &&

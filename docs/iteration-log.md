@@ -359,3 +359,13 @@ All 94 tests, lint and build pass, including the 20-day food regression and comp
 Browser inspection resumed the previously crowded fern chamber save. Workers settled into two facing rows, leaving a visibly clearer middle around the player. No warnings/errors were captured and the inspected scene ran near 60 FPS. The player then followed the store scent through the revised route.
 
 This changes resting layout, heading and place-route waypoints. It does not implement oriented body collision, leg collision, collision-safe turning, or universal crowd avoidance. The separate parcel-visibility route planner still uses static ground rather than occupied-bed footprints. Close contact during arrivals, greetings or manual movement can still occur.
+
+## Terrain-aware player parcel transfer
+
+Player pickup and drop now check a short sampled path between the rendered ant's head height and the parcel's centre. Nearby items behind intervening solid terrain are not offered for pickup. A blocked drop retains the held load and asks the player to turn or move away; the same checks run again at transfer time. Simulation transfer functions accept the reach/placement predicates so rejection occurs before ownership or credit changes.
+
+Drops account for the existing walk-support surface, including the raised static store seeds. A saved support offset keeps the deposited item displayed at that placement height instead of burying it at terrain height. Ordinary later drops reset that offset; crew deposition clears it. Optional offsets are validated for finite bounded values.
+
+All 96 tests, lint and build pass. New tests cover intervening solid terrain, rejection preserving cargo and food, reachable slopes, excessive range, and saved placement height. Browser playtesting completed a surface seed pickup and store handoff with the new checks: food increased from 36 to 37 and cargo cleared. No warnings/errors were captured; the inspected scene ran near 60 FPS.
+
+This is a sampled centre-path check using the current solid field, not swept parcel-volume collision or exact mandible contact. NPC transfer still uses its existing checks. Support offsets are static placement heights rather than a dynamic pile solver, and decorative props absent from the solid/support fields remain outside this check.

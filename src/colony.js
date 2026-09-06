@@ -170,6 +170,7 @@ export function updateColony(
         item.x = n.x + ((n.id % 3) - 1) * 0.18;
         item.z = n.z;
         item.deposited = true;
+        item.supportOffset = 0;
         item.owner = null;
         n.cargo = null;
         if (item.kind === "seed") {

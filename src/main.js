@@ -21,6 +21,7 @@ import { ensureBedding, beddingCount } from "./bedding.js";
 import { leafScrapGeometry } from "./leaf-scrap.js";
 import { applyItemAppearance } from "./item-appearance.js";
 import { restingPlace } from "./colony-layout.js";
+import { clearParcelPath } from "./parcel-contact.js";
 import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
@@ -194,6 +195,7 @@ function syncItems() {
       item.x,
       height(item.x, item.z) +
         (item.kind === "leaf" ? 0.04 : 0.2) +
+        (item.supportOffset ?? 0) +
         (item.fallHeight ?? 0) +
         (item.deposited ? 0.08 : 0),
       item.z,
@@ -220,7 +222,7 @@ function nearby() {
   if (p.carrying !== null)
     return {
       kind: "drop",
-      ...prepareLoadDrop(state),
+      ...prepareLoadDrop(state, canPlaceItem),
     };
   const item = state.items
     .filter(
@@ -229,7 +231,8 @@ function nearby() {
         !(i.fallHeight > 0) &&
         i.owner == null &&
         i.id !== p.carrying &&
-        distance(p, i) < 1.8,
+        distance(p, i) < 1.8 &&
+        canReachItem(i),
     )
     .sort((a, b) => distance(p, a) - distance(p, b))[0];
   if (item)
@@ -264,12 +267,24 @@ function interact() {
   if (!n) return;
   audio.click();
   if (n.kind === "drop") {
+    if (n.blocked) {
+      toast(
+        "Turn or move away from the obstruction before putting down your load.",
+      );
+      return;
+    }
     route = [];
+    n.position.supportOffset = Math.max(
+      0,
+      world.walkHeight(n.position.x, n.position.z) -
+        height(n.position.x, n.position.z),
+    );
     if (n.item.kind === "leaf") n.item.yaw = state.player.yaw;
-    if (deposit(state, n.position)) toast(loadDropMessage(n.item));
+    if (deposit(state, n.position, canPlaceItem))
+      toast(loadDropMessage(n.item));
   } else if (n.kind === "item") {
     route = [];
-    pickup(state, n.item);
+    if (!pickup(state, n.item, canReachItem)) return;
     toast(
       n.item.kind === "leaf"
         ? "Leaf bedding for your chamber. Carry it home and lay it where you like."
@@ -295,6 +310,24 @@ function interact() {
 }
 function canExchangeScents(a, b) {
   return clearScentPath(a, b, world.solidDensity, world.walkHeight);
+}
+function canReachItem(item) {
+  return clearParcelPath(
+    state.player,
+    item,
+    world.solidDensity,
+    (x, z) => height(x, z) + (item.supportOffset ?? 0),
+    player.root.position.y + 0.52,
+  );
+}
+function canPlaceItem(item, position) {
+  return clearParcelPath(
+    state.player,
+    { ...position, kind: item.kind },
+    world.solidDensity,
+    world.walkHeight,
+    player.root.position.y + 0.52,
+  );
 }
 function workerScreenPoint(n) {
   return new T.Vector3(n.x, world.walkHeight(n.x, n.z) + 1.3, n.z).project(

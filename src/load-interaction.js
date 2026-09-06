@@ -1,6 +1,6 @@
 import { deliveryDestination } from "./simulation.js";
 
-export function prepareLoadDrop(state) {
+export function prepareLoadDrop(state, canPlace = () => true) {
   const player = state.player;
   const item = state.items.find((i) => i.id === player.carrying);
   if (!item) return null;
@@ -9,12 +9,15 @@ export function prepareLoadDrop(state) {
     z: player.z - Math.cos(player.yaw),
   };
   const destination = deliveryDestination(item, position);
+  const blocked = !canPlace(item, position);
   return {
     item,
     position,
     destination,
-    text:
-      destination === "home"
+    blocked,
+    text: blocked
+      ? "E · No clear space for your load — turn or move away"
+      : destination === "home"
         ? "E · Lay out your leaf bedding"
         : destination === "spoil"
           ? "E · Deposit soil in the spoil bed"
