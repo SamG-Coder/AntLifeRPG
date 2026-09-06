@@ -51,7 +51,10 @@ export class CameraRig {
       height(player.x, player.z) + 0.63,
       player.z,
     );
-    if (surface) target.copy(surface.position).addScaledVector(up, 0.63);
+    if (surface)
+      target
+        .copy(surface.position)
+        .addScaledVector(up, 0.63 + surface.bodyLift);
     const forward = surface
       ? surface.forward.clone().applyAxisAngle(up, this.yaw)
       : new T.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));

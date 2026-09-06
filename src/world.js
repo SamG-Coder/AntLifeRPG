@@ -64,8 +64,9 @@ export function walkable(x, z) {
 export function climbDensity(x, y, z) {
   const wall = caveDensity(x, y, z, false),
     floor = height(x, z) - y;
-  const blend = Math.max(2 - Math.abs(wall - floor), 0);
-  return Math.max(wall, floor) + (blend * blend) / 8;
+  // Begin changing stance early enough for the full abdomen to clear the floor.
+  const blend = Math.max(3.2 - Math.abs(wall - floor), 0);
+  return Math.max(wall, floor) + (blend * blend) / 12.8;
 }
 export function caveDensity(x, y, z, detail = true) {
   const f = field(x, z);

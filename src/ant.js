@@ -175,7 +175,10 @@ export class Ant {
         this.restBlend * 0.22;
     }
     this.root.position.set(x, this.height(x, z) - this.restBlend * 0.1, z);
-    if (surface) this.root.position.copy(surface.position);
+    if (surface)
+      this.root.position
+        .copy(surface.position)
+        .addScaledVector(surface.normal, surface.bodyLift ?? 0);
     this.yaw = yaw;
     const epsilon = 0.12;
     const normal = surface
@@ -190,6 +193,10 @@ export class Ant {
       : new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     forward.addScaledVector(normal, -forward.dot(normal)).normalize();
     const right = forward.clone().cross(normal).normalize();
+    if (surface) {
+      normal.applyAxisAngle(right, surface.bodyPitch ?? 0);
+      forward.applyAxisAngle(right, surface.bodyPitch ?? 0);
+    }
     const basis = new T.Matrix4().makeBasis(
       right,
       normal,
@@ -283,7 +290,7 @@ export class Ant {
       travel > 0.0001
         ? Math.sin(this.phase * 2) * 0.012
         : Math.sin(this.animationTime * 1.8) * 0.006 * quiet;
-    this.previous.copy(this.root.position);
+    this.previous.copy(surface ? surface.position : this.root.position);
     this.previousYaw = yaw;
     this.wasAttached = !!surface;
     this.previousSurfaceForward = surface ? forward.clone() : null;

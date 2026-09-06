@@ -1,5 +1,6 @@
 import { Vector3 } from "three/webgpu";
 import { projectContact, transportHeading } from "./contact.js";
+import { bodyPenetration, fitBodyClearance } from "./body-clearance.js";
 
 export function attachSurface(density, position, forward) {
   const contact = projectContact(density, position, { maxTravel: 0.8 });
@@ -22,23 +23,17 @@ export function moveOnSurface(
     position: frame.position.clone(),
     normal: frame.normal.clone(),
     forward: frame.forward.clone().applyAxisAngle(frame.normal, turn),
+    bodyLift: frame.bodyLift ?? 0,
+    bodyPitch: frame.bodyPitch ?? 0,
   };
-  const penetration = (f) => {
-    const right = f.forward.clone().cross(f.normal);
-    let maximum = -Infinity;
-    for (const along of [-0.75, 0, 0.75])
-      for (const side of [-0.22, 0, 0.22]) {
-        const body = f.position
-          .clone()
-          .addScaledVector(f.normal, 0.43)
-          .addScaledVector(f.forward, along)
-          .addScaledVector(right, side);
-        maximum = Math.max(maximum, solidDensity(body.x, body.y, body.z));
-      }
-    return maximum;
-  };
-  if (penetration(result) > Math.max(0.025, penetration(frame) + 1e-5))
+  const penetration = (f) => bodyPenetration(solidDensity, f);
+  result = fitBodyClearance(solidDensity, result) ?? result;
+  if (penetration(result) > Math.max(0.025, penetration(frame) + 1e-5)) {
     result.forward.copy(frame.forward);
+    result.bodyLift = frame.bodyLift ?? 0;
+    result.bodyPitch = frame.bodyPitch ?? 0;
+    result = fitBodyClearance(solidDensity, result) ?? result;
+  }
   const steps = Math.max(1, Math.ceil(Math.abs(distance) / 0.04));
   for (let i = 0; i < steps; i++) {
     const candidate = result.position
@@ -51,10 +46,13 @@ export function moveOnSurface(
       contact.normal.dot(result.normal) < 0.5
     )
       break;
-    const next = {
+    let next = {
       ...contact,
       forward: transportHeading(result.forward, result.normal, contact.normal),
+      bodyLift: result.bodyLift,
+      bodyPitch: result.bodyPitch,
     };
+    next = fitBodyClearance(solidDensity, next) ?? next;
     if (penetration(next) > Math.max(0.025, penetration(result) + 1e-5)) break;
     result = next;
   }
@@ -65,10 +63,18 @@ export const serializeFrame = (frame) => ({
   position: frame.position.toArray(),
   normal: frame.normal.toArray(),
   forward: frame.forward.toArray(),
+  bodyLift: frame.bodyLift ?? 0,
+  bodyPitch: frame.bodyPitch ?? 0,
 });
 export function restoreFrame(value) {
   if (
     !value ||
+    (value.bodyPitch !== undefined &&
+      (!Number.isFinite(value.bodyPitch) || Math.abs(value.bodyPitch) > 0.5)) ||
+    (value.bodyLift !== undefined &&
+      (!Number.isFinite(value.bodyLift) ||
+        value.bodyLift < 0 ||
+        value.bodyLift > 0.5)) ||
     ![value.position, value.normal, value.forward].every(
       (v) => Array.isArray(v) && v.length === 3 && v.every(Number.isFinite),
     )
@@ -78,6 +84,8 @@ export function restoreFrame(value) {
     position: new Vector3().fromArray(value.position),
     normal: new Vector3().fromArray(value.normal),
     forward: new Vector3().fromArray(value.forward),
+    bodyLift: value.bodyLift ?? 0,
+    bodyPitch: value.bodyPitch ?? 0,
   };
   if (frame.normal.lengthSq() < 0.5 || frame.forward.lengthSq() < 0.5)
     return null;

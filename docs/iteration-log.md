@@ -123,3 +123,13 @@ The follow camera now searches alternate angles around the ant's contact normal 
 Three tests verify preservation of an unobstructed orbit, collision-free alternate views for upright/inverted contacts with stable selection, and a lower orbit in a 2.2-unit tunnel. All 37 tests, lint and production build pass. Production-preview playtesting restored the saved inverted store contact and exercised manual orbit into a blocked corner: DOM telemetry showed a 60-degree automatic offset, a wider chamber view and approximately 60 FPS in this observed session, without captured warnings/errors.
 
 This improves available viewing space; it does not guarantee visibility of the entire ant. In the corner inspection, the soil lip still occluded part of the head. First-person close-wall views and climbing body clearance remain separate work. The field excludes decorative props, and broad performance/continuous camera-transition validation remains outstanding.
+
+## Full-length climbing body clearance
+
+Replaced the short nine-point spine check with 44 samples around Blender-sized head, mesosoma, gaster and mandible extents. The previous check stopped at 0.75 units fore/aft, missing the mandibles at 1.16 and gaster rear at 1.46. Forward and reverse obstacle tests now check the resulting posed body against solids.
+
+Climbing stance can raise the root up to 0.48 units and pitch the body up to 0.45 radians relative to the contact frame. The movement field begins rounding the floor/wall join earlier so the full abdomen can negotiate the transition. Soil contact position remains separate from body pose; feet project onto detailed solids and the camera follows the raised root. Pose values serialize with backward-compatible defaults and bounds validation. This remains sampled clearance, not swept mesh collision; the rounded movement surface differs from the visible soil.
+
+All 38 tests pass, including the actual home floor-to-wall-to-ceiling path with a body-penetration assertion at every step, sphere travel, mandible/abdomen obstacle checks and pose serialization. Lint and production build pass. In the production-preview browser, an older saved ceiling attachment fitted a 0.336-unit lift, then steady movement carried it beyond its former corner to a descending store-wall contact at y=1.35, lift=0.471 and pitch=-0.45. Visual inspection showed body clearance and no captured browser errors, at approximately 60 FPS in that observed session.
+
+The extended stance exposed stretched-looking legs. Reach-constrained foot support, pose-transition collision, flexible antenna contact, cargo bounds and prop contact remain unfinished. The new body samples do not prove clearance of unsampled mesh details or all six planted feet.
