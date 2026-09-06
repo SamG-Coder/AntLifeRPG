@@ -98,6 +98,7 @@ export function tick(state, dt, { canMeet, canWalk } = {}) {
   advanceGrooming(p, dt);
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
   advanceSoilStability(state, dt, excavate);
+  advancePlayerGreetings(state, dt, canMeet);
   updateColony(state, dt, { sites, distance, excavate, canMeet, canWalk });
   recordNurseryCompletion(state);
 }
@@ -167,11 +168,31 @@ export function remember(state, npc, event) {
   npc.trust += event === "shared-work" ? 2 : 1;
   return true;
 }
-export function greet(state, npc) {
-  if (distance(state.player, npc) >= 2 || npc.greetingRemaining > 0)
+export function greet(state, npc, canMeet = () => true) {
+  if (
+    state.player.attachment ||
+    distance(state.player, npc) >= 2 ||
+    npc.greetingRemaining > 0 ||
+    !canMeet(state.player, npc)
+  )
     return null;
   npc.greetingRemaining = 2.8;
-  return remember(state, npc, "greet");
+  return !npc.memories.some((m) => m.key === `${state.day}:greet`);
+}
+function advancePlayerGreetings(state, dt, canMeet = () => true) {
+  for (const npc of state.npcs) {
+    if (!(npc.greetingRemaining > 0)) continue;
+    if (
+      state.player.attachment ||
+      distance(state.player, npc) >= 2.8 ||
+      !canMeet(state.player, npc)
+    ) {
+      npc.greetingRemaining = 0;
+      continue;
+    }
+    npc.greetingRemaining = Math.max(0, npc.greetingRemaining - dt);
+    if (npc.greetingRemaining === 0) remember(state, npc, "greet");
+  }
 }
 export function relationship(npc) {
   return npc.trust >= 8

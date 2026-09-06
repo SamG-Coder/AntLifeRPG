@@ -96,9 +96,7 @@ export function updateColony(
     if (n.encounterRemaining > 0) continue;
     if (n.greetingRemaining > 0) {
       n.groomRemaining = 0;
-      n.greetingRemaining = Math.max(0, n.greetingRemaining - dt);
-      if (distance(n, state.player) > 3) n.greetingRemaining = 0;
-      else continue;
+      continue;
     }
     n.breakReason = breakReason(n, state.time);
     if (n.breakReason || n.greetingRemaining > 0) n.groomRemaining = 0;

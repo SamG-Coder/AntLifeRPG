@@ -240,13 +240,16 @@ function nearby() {
   if (distance(p, sites.store) < 2.5)
     return { kind: "eat", text: "E · Eat from the communal store" };
   const npc = state.npcs
-    .filter((n) => distance(p, n) < 2)
+    .filter((n) => distance(p, n) < 2 && canExchangeScents(p, n))
     .sort((a, b) => distance(p, a) - distance(p, b))[0];
   if (npc)
     return {
       kind: "social",
       npc,
-      text: `E · Antennal greeting with ${npc.name}`,
+      text:
+        npc.greetingRemaining > 0
+          ? `Exchanging scents with ${npc.name} · ${Math.ceil(npc.greetingRemaining)}s · stay nearby`
+          : `E · Antennal greeting with ${npc.name}`,
     };
   if (distance(p, sites.home) < 3)
     return { kind: "home", text: "R · Rest on your leaf bed" };
@@ -291,17 +294,20 @@ function interact() {
   } else if (n.kind === "home") rest();
   syncItems();
 }
+function canExchangeScents(a, b) {
+  return clearScentPath(a, b, world.solidDensity, world.walkHeight);
+}
 function greetWorker(npc) {
   if (surfaceFrame) return;
   if (!npc) {
     toast("Move closer to a worker to exchange scents.");
     return;
   }
-  const fresh = greet(state, npc);
+  const fresh = greet(state, npc, canExchangeScents);
   if (fresh === null) return;
   toast(
     fresh
-      ? `${npc.name} pauses for an antennal exchange. Your scent is remembered.`
+      ? `${npc.name} pauses for an antennal exchange. Stay nearby while you exchange scents.`
       : `${npc.name} recognises your scent. ${relationship(npc)}.`,
   );
 }
@@ -598,7 +604,10 @@ addEventListener("keydown", (e) => {
   if (e.code === "KeyG")
     greetWorker(
       state.npcs
-        .filter((n) => distance(n, state.player) < 2)
+        .filter(
+          (n) =>
+            distance(n, state.player) < 2 && canExchangeScents(state.player, n),
+        )
         .sort(
           (a, b) => distance(a, state.player) - distance(b, state.player),
         )[0],

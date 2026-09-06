@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createState, greet, tick } from "../src/simulation.js";
+import { clearScentPath } from "../src/colony-social.js";
 
 test("greeting pauses an owned delivery, preserves its route and resumes work", () => {
   const s = createState();
@@ -20,6 +21,7 @@ test("greeting pauses an owned delivery, preserves its route and resumes work", 
     { id: 1, kind: "soil", owner: n.id, x: n.x, z: n.z, deposited: false },
   ];
   assert.equal(greet(s, n), true);
+  assert.equal(n.trust, 0);
   tick(s, 1);
   assert.equal(n.x, -10);
   assert.equal(n.z, -21);
@@ -39,10 +41,42 @@ test("greetings require proximity and never grant repeated daily trust", () => {
   n.x = s.player.x;
   n.z = s.player.z + 1.5;
   assert.equal(greet(s, n), true);
-  n.greetingRemaining = 0;
+  n.workVersion = 1;
+  for (let i = 0; i < 57; i++) tick(s, 0.05);
   assert.equal(greet(s, n), false);
   assert.equal(n.trust, 1);
   s.player.x += 10;
   tick(s, 0.05);
   assert.equal(n.greetingRemaining, 0);
+});
+
+test("blocked and interrupted player greetings do not award memories or trust", () => {
+  const s = createState(),
+    n = s.npcs[0];
+  n.x = s.player.x;
+  n.z = s.player.z + 1;
+  n.workVersion = 1;
+  assert.equal(
+    greet(s, n, (a, b) =>
+      clearScentPath(
+        a,
+        b,
+        (_x, _y, z) => 0.1 - Math.abs(z - 1.5),
+        () => 0,
+      ),
+    ),
+    null,
+  );
+  assert.equal(greet(s, n), true);
+  tick(s, 1);
+  assert.equal(n.trust, 0);
+  tick(s, 0.1, { canMeet: () => false });
+  assert.equal(n.greetingRemaining, 0);
+  assert.equal(n.memories.length, 0);
+  n.x = s.player.x;
+  n.z = s.player.z + 1;
+  assert.equal(greet(s, n), true);
+  s.player.x += 10;
+  tick(s, 3);
+  assert.equal(n.trust, 0);
 });

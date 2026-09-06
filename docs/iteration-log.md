@@ -331,3 +331,13 @@ Ground items, player cargo and worker cargo now share one appearance definition 
 All 91 existing tests, lint and build pass. Browser playtesting gathered a seed, carried it to the store, and inspected it from a side view: the pale elongated seed was visible ahead of the head instead of a generic brown clump. The initial garden view was obscured by vegetation/water, so it was not used as visual proof. No warnings/errors were captured, and the inspected store scene ran near 60 FPS. Worker cargo uses the same mapping, but a close worker pickup was not separately observed in this session.
 
 This aligns parcel appearance through carrying; it does not add mandible contact solving, load-dependent balance, cargo collision, or new seed/soil asset detail.
+
+## Player greetings require completed contact
+
+Player greetings previously granted familiarity immediately and checked only horizontal distance, unlike worker-to-worker encounters. Starting a player exchange now requires a clear scent path through the same solid-density/height query used by worker encounters. NPC selection for the E prompt and G action excludes obstructed workers. While the 2.8-second exchange proceeds, continued proximity, ground contact and a clear scent path are required. Interrupted exchanges stop without a new memory or trust; completed exchanges retain the once-per-day rule.
+
+The simulation owns greeting advancement and completion before worker scheduling. Workers pause while the greeting remains active, retaining their cargo and route, then resume. Initial feedback asks the player to remain nearby instead of claiming familiarity before completion. The nearby greeting prompt can display the remaining seconds.
+
+All 92 tests pass, along with lint/build. Tests cover a solid slab preventing a start, contact becoming blocked, walking away, no early reward, one daily reward, and resuming a conserved owned delivery. Browser playtesting walked to the fern sleeping chamber, started an exchange with Ash and inspected the shared-memory record afterward. No warnings/errors were captured. The short countdown had already elapsed by the subsequent UI inspection, so that inspection verifies completed feedback/state rather than an observed countdown animation.
+
+The scent path uses the existing approximate head-height ray. This is not exact antenna-to-antenna contact, a full social dialogue system, or a change to the relationship progression thresholds.
