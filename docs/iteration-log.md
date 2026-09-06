@@ -169,3 +169,11 @@ Initial browser testing revealed that raw density thresholds misclassified ceili
 Production-preview playtesting resumed the saved home-ceiling attachment and traversed toward the store. After contact correction, telemetry progressed from (1.26,3.82,-0.13) to (-3.38,1.83,-9.38). A moving sample had two current stance contacts (subsequent movement waits); after pausing the store pose settled to six planted feet, zero recovery/unreachable counts and segment error around 1.1e-15. No browser warnings/errors were captured. Store props briefly filled the camera view, reproducing the outstanding decorative-prop collision gap.
 
 This does not verify a stable support polygon, non-collinear or distinct contacts, friction/adhesion, fall behavior, full swing collision or support-aware NPC body motion. Minimum-rate stepping while waiting can still look like stepping in place. Prop-aware camera collision remains necessary.
+
+## Camera collision with prominent static props
+
+Added camera-only collision envelopes for the 45 stored decorative seeds, 34 surface rocks, water drop and three large roots. Ellipsoid envelopes preserve mesh translation, rotation and non-uniform scale; roots use capsule chains following the same sampled curve as their tube geometry. Local bounds skip distant envelope calculations. Both camera modes and alternate follow-orbit selection use the combined soil/excavation/prop field.
+
+All 49 tests, lint and production build pass. New tests cover a rotated/stretched seed envelope, stopping before a root, and escape from a non-central enclosed root target. Production-preview inspection restored the exact store attachment where the previous camera had shown a seed filling the screen. The new follow view showed the ant and chamber; first-person switching also rendered without captured warnings/errors. Observed performance remained around 60 FPS in this session.
+
+These are approximate static camera envelopes, not mesh-exact collision or ant locomotion surfaces. Small hanging rootlets, leaves/moss, movable items/cargo and NPC bodies remain outside the camera field. Rock envelopes can leave extra clearance. Deeply enclosed anchors and overlapping envelopes still require broader testing; the existing projection can fail at flat gradients. No general performance claim is made from this one browser session.

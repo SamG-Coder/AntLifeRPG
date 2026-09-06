@@ -127,7 +127,7 @@ const player = new Ant(
 );
 const ants = state.npcs.map((n) => new Ant(scene, n.x, n.z, height));
 player.contactDensity = world.solidDensity;
-const rig = new CameraRig(camera, $("world"), world.solidDensity);
+const rig = new CameraRig(camera, $("world"), world.cameraDensity);
 rig.yaw = state.player.yaw;
 rig.first = state.settings.firstPerson;
 if (surfaceFrame) rig.yaw = 0;

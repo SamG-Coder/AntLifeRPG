@@ -2,6 +2,7 @@ import * as T from "three/webgpu";
 import { random, capsuleBetween } from "./math.js";
 import { sites } from "./simulation.js";
 import { implicitMesh } from "./terrain.js";
+import { cameraEllipsoid, cameraCapsule } from "./camera-props.js";
 import { leafTexture } from "./foliage.js";
 import { restingPlace } from "./colony-layout.js";
 import {
@@ -110,6 +111,7 @@ function soilTexture() {
   return texture;
 }
 export function buildWorld(scene, state) {
+  const cameraProps = [];
   const texture = soilTexture();
   const soil = new T.MeshStandardMaterial({
     color: 0xb79b71,
@@ -263,6 +265,11 @@ export function buildWorld(scene, state) {
       points.map((p) => new T.Vector3(...p)),
     );
     const mesh = new T.Mesh(new T.TubeGeometry(curve, 40, r, 9, false), bark);
+    if (r > 0.1) {
+      const samples = curve.getPoints(40);
+      for (let i = 1; i < samples.length; i++)
+        cameraProps.push(cameraCapsule(samples[i - 1], samples[i], r));
+    }
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     scene.add(mesh);
@@ -446,6 +453,7 @@ export function buildWorld(scene, state) {
     const mesh = new T.Mesh(new T.IcosahedronGeometry(r, 2), rockMat);
     mesh.position.set(x, height(x, z) + r * 0.3, z);
     mesh.scale.set(1.2, 0.7, 1);
+    cameraProps.push(cameraEllipsoid(mesh));
     mesh.castShadow = true;
     mesh.receiveShadow = true;
     scene.add(mesh);
@@ -465,6 +473,7 @@ export function buildWorld(scene, state) {
   );
   water.position.set(15, height(15, -29) + 0.3, -29);
   water.scale.set(1.8, 0.65, 1.5);
+  cameraProps.push(cameraEllipsoid(water));
   scene.add(water);
   const glass = new T.Mesh(
     new T.PlaneGeometry(58, 24),
@@ -495,6 +504,7 @@ export function buildWorld(scene, state) {
     );
     m.scale.set(1, 0.7, 1.9);
     m.rotation.y = rng() * 6;
+    cameraProps.push(cameraEllipsoid(m));
     m.castShadow = true;
     scene.add(m);
   }
@@ -615,6 +625,16 @@ export function buildWorld(scene, state) {
     trail,
     dust,
     rebuildExcavation,
+    cameraDensity: (x, y, z) => {
+      let density = Math.max(
+        caveDensity(x, y, z),
+        height(x, z) - y,
+        excavationField(x, y, z),
+      );
+      for (const prop of cameraProps)
+        density = Math.max(density, prop(x, y, z));
+      return density;
+    },
     contactDensity: (x, y, z) =>
       Math.max(climbDensity(x, y, z), excavationField(x, y, z)),
     solidDensity: (x, y, z) =>
