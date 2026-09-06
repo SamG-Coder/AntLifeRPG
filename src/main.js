@@ -17,6 +17,8 @@ import { separateWorkersFromPlayer } from "./player-separation.js";
 import { currentDuty } from "./duties.js";
 import { nutrition } from "./nutrition.js";
 import { gardenCapacity } from "./food-supply.js";
+import { ensureBedding, beddingCount } from "./bedding.js";
+import { leafScrapGeometry } from "./leaf-scrap.js";
 import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
@@ -45,6 +47,7 @@ addEventListener("error", (event) => {
   $("status").textContent = `Runtime error: ${event.message}`;
 });
 const state = await load();
+ensureBedding(state);
 let surfaceFrame = restoreFrame(state.player.attachment);
 let gripCruise = false;
 let route = [];
@@ -148,6 +151,9 @@ const presentation = new Presentation(
   state.settings.quality ?? "balanced",
 );
 const itemMeshes = new Map();
+const leafGeo = leafScrapGeometry();
+const cargoGeometry = player.cargo.geometry,
+  cargoMaterial = player.cargo.material;
 const soilGeo = new T.IcosahedronGeometry(0.27, 1);
 function syncItems() {
   const liveIds = new Set(state.items.map((item) => item.id));
@@ -161,8 +167,16 @@ function syncItems() {
     let m = itemMeshes.get(item.id);
     if (!m) {
       m = new T.Mesh(
-        item.kind === "seed" ? world.seedGeo : soilGeo,
-        item.kind === "seed" ? world.seedMat : world.soil,
+        item.kind === "leaf"
+          ? leafGeo
+          : item.kind === "seed"
+            ? world.seedGeo
+            : soilGeo,
+        item.kind === "leaf"
+          ? world.leafMat
+          : item.kind === "seed"
+            ? world.seedMat
+            : world.soil,
       );
       m.castShadow = true;
       m.receiveShadow = true;
@@ -171,10 +185,11 @@ function syncItems() {
       itemMeshes.set(item.id, m);
     }
     m.visible = item.id !== state.player.carrying && item.owner == null;
+    if (item.kind === "leaf") m.rotation.y = item.yaw ?? 0;
     m.position.set(
       item.x,
       height(item.x, item.z) +
-        0.2 +
+        (item.kind === "leaf" ? 0.04 : 0.2) +
         (item.fallHeight ?? 0) +
         (item.deposited ? 0.08 : 0),
       item.z,
@@ -217,7 +232,7 @@ function nearby() {
     return {
       kind: "item",
       item,
-      text: `E · Lift ${item.kind === "seed" ? "a fallen seed" : "the loosened soil"}`,
+      text: `E · Lift ${item.kind === "leaf" ? "the leaf scrap" : item.kind === "seed" ? "a fallen seed" : "the loosened soil"}`,
     };
   if (distance(p, sites.store) < 2.5)
     return { kind: "eat", text: "E · Eat from the communal store" };
@@ -245,14 +260,17 @@ function interact() {
   audio.click();
   if (n.kind === "drop") {
     route = [];
+    if (n.item.kind === "leaf") n.item.yaw = state.player.yaw;
     if (deposit(state, n.position)) toast(loadDropMessage(n.item));
   } else if (n.kind === "item") {
     route = [];
     pickup(state, n.item);
     toast(
-      n.item.kind === "soil"
-        ? "The clump grips between your mandibles. Carry it to the spoil bed."
-        : "A seed for the colony. Carry it to the communal store.",
+      n.item.kind === "leaf"
+        ? "Leaf bedding for your chamber. Carry it home and lay it where you like."
+        : n.item.kind === "soil"
+          ? "The clump grips between your mandibles. Carry it to the spoil bed."
+          : "A seed for the colony. Carry it to the communal store.",
     );
   } else if (n.kind === "eat") {
     if (state.colony && state.colony.food <= 0) {
@@ -360,6 +378,10 @@ function journal() {
   const supply = document.createElement("p");
   supply.textContent = `A caretaker scatters seeds in the root garden each morning at 06:00, up to ${gardenCapacity(state)} uncollected parcels to cover the colony's daily meals. ${state.foodSupply?.arrivals ?? 0} seeds have arrived since this routine began.`;
   roster.append(supply);
+  const bedding = document.createElement("p");
+  const arranged = beddingCount(state);
+  bedding.textContent = `Your chamber: ${arranged} leaf ${arranged === 1 ? "scrap" : "scraps"} arranged. Find leaf bedding in the root garden, carry it home and press E to place it. You can lift and rearrange each scrap.`;
+  roster.append(bedding);
   const selfCare = document.createElement("p");
   const cleanliness = state.player.cleanliness ?? 78;
   selfCare.textContent = `Your antennae: ${cleanliness >= 90 ? "clean" : cleanliness >= 60 ? "dusty" : "coated in soil"} · ${state.player.groomingBouts ?? 0} grooming breaks completed. Press L on the ground to groom.`;
@@ -405,7 +427,7 @@ function followScent(key, kind = null) {
   toast(
     kind
       ? routeLoad
-        ? `You follow the scent of an available ${kind === "seed" ? "seed" : "soil load"}. WASD to leave the trail.`
+        ? `You follow the scent of an available ${kind === "leaf" ? "leaf scrap" : kind === "seed" ? "seed" : "soil load"}. WASD to leave the trail.`
         : "No available load has a clear ground route. The crew may be carrying the remaining parcels."
       : `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
   );
@@ -425,6 +447,11 @@ for (const [key, site] of Object.entries(sites)) {
   $("journal").append(button);
 }
 const notesButton = document.createElement("button");
+const beddingButton = document.createElement("button");
+beddingButton.textContent = "Find leaf bedding ↗";
+beddingButton.className = "scent-choice";
+beddingButton.onclick = () => followScent("surface", "leaf");
+$("journal").append(beddingButton);
 notesButton.id = "notes-button";
 notesButton.textContent = "H · Scent & field notes";
 notesButton.onclick = journal;
@@ -723,6 +750,10 @@ renderer.setAnimationLoop(() => {
     }
     if (elapsed - lastSave > 20) persist();
   }
+  const carryingLeaf =
+    state.items.find((i) => i.id === state.player.carrying)?.kind === "leaf";
+  player.cargo.geometry = carryingLeaf ? leafGeo : cargoGeometry;
+  player.cargo.material = carryingLeaf ? world.leafMat : cargoMaterial;
   player.update(
     state.player.x,
     state.player.z,

@@ -313,3 +313,13 @@ Nutrition rates, meal sizes and game-clock rate now have one shared definition u
 Repeating 30 days with the new allowance, including 50 modeled player meals, ended with 59 portions, 472 crew seed deliveries, 148 active item records and minimum worker nourishment about 34.607. The preserved 20-day regression verifies nourishment above 30, player meal demand, a positive final reserve, exact food accounting against all recorded meals, bounded item records and valid saved state. All 89 tests, lint and build pass. Browser field notes showed the 19-parcel policy while preserving the existing 12-arrival history, with no captured warnings/errors.
 
 The long-run test models player portion demand directly and does not simulate a human's route to every meal, repeated extra hunger costs from resting, delivery disruption, changing population or every crowd arrangement. This establishes a sustainable baseline under the tested routine, not universal food balance or a species-specific metabolic model.
+
+## Gatherable and rearrangeable home bedding
+
+Four persistent leaf scraps can now be found through a field-notes scent route, picked up, carried home and placed at the player's chosen drop position and facing. Carried leaves use a curved, textured leaf mesh. Home placement records an arranged scrap without marking it as a colony delivery; lifting it clears placement so it can be moved again. Placed bedding is excluded from the gathering trail. Existing saves receive the four scraps once through a saved initialization marker.
+
+The carried-leaf duty points home and explains placement/rearrangement. Field notes show the arranged count and offer Find leaf bedding. Optional placement and orientation fields are validated on load. Tests cover idempotent initialization, real garden walkability, identity and position preservation through reload/rearrangement, exclusion of arranged scraps from gathering, invalid placement, ordinary drops outside home, and no food/soil credit.
+
+All 91 tests, lint and build pass. Browser playtesting followed the leaf route, picked up a scrap, visually inspected its carried form, walked home and placed it. The prompt switched to lifting it again and field notes recorded one arranged scrap. No warnings/errors were captured; the inspected scene ran near 60 FPS. The placed scrap was largely occluded by the player in the inspected rear view, while the carried leaf was clearly visible.
+
+This is a first personal furnishing loop. It does not add a sleep bonus, furnishing editor, leaf deformation/stacking/body collision, NPC furnishing ownership or an expanded home progression system. Four scraps are provided once; replenishment and additional furnishing types remain future work.

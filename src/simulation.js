@@ -6,6 +6,7 @@ import { advanceSoilStability, validSoilMotion } from "./soil-stability.js";
 import { recordNurseryCompletion, validNurseryCompletion } from "./duties.js";
 import { advanceFoodSupply, validFoodSupply } from "./food-supply.js";
 import { nutrition } from "./nutrition.js";
+import { validBedding } from "./bedding.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -124,9 +125,12 @@ export function pickup(state, item) {
   )
     return false;
   state.player.carrying = item.id;
+  if (item.kind === "leaf") item.homePlaced = false;
   return true;
 }
 export function deliveryDestination(item, position) {
+  if (item?.kind === "leaf" && distance(position, sites.home) < 4.5)
+    return "home";
   if (item?.kind === "soil" && distance(position, sites.spoil) < 3)
     return "spoil";
   if (item?.kind === "seed" && distance(position, sites.store) < 3)
@@ -141,6 +145,7 @@ export function deposit(state, position) {
   item.y = position.y ?? 0;
   state.player.carrying = null;
   const destination = deliveryDestination(item, position);
+  if (item.kind === "leaf") item.homePlaced = destination === "home";
   if (destination === "spoil") {
     item.deposited = true;
     state.player.deliveries++;
@@ -202,11 +207,12 @@ export function validateState(state) {
         i &&
         Number.isInteger(i.id) &&
         [i.x, i.z].every(Number.isFinite) &&
-        ["soil", "seed"].includes(i.kind),
+        ["soil", "seed", "leaf"].includes(i.kind),
     ) &&
     validSoilMotion(state) &&
     validNurseryCompletion(state) &&
     validFoodSupply(state) &&
+    validBedding(state) &&
     new Set(state.items.map((i) => i.id)).size === state.items.length &&
     Number.isInteger(state.nextItem) &&
     state.items.every((i) => i.id < state.nextItem) &&

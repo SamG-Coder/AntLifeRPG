@@ -5,6 +5,7 @@ export function collectableItem(state, item, kind) {
     !!item &&
     item.kind === kind &&
     !item.deposited &&
+    !item.homePlaced &&
     item.owner == null &&
     item.id !== state.player.carrying &&
     !(item.fallHeight > 0)

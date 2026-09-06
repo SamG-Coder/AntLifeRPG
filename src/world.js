@@ -686,6 +686,7 @@ export function buildWorld(scene, state) {
     soil,
     seedMat,
     seedGeo,
+    leafMat,
     trail,
     dust,
     rebuildExcavation,

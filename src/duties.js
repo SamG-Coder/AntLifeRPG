@@ -39,12 +39,24 @@ export function currentDuty(state) {
   if (carried)
     return {
       id: "deliver",
-      title: carried.kind === "seed" ? "Bring food home" : "Finish this load",
+      title:
+        carried.kind === "leaf"
+          ? "A softer place to rest"
+          : carried.kind === "seed"
+            ? "Bring food home"
+            : "Finish this load",
       text:
-        carried.kind === "seed"
-          ? "Carry your seed to the communal store and press E."
-          : "Bring soil to the spoil bed. Press E to deposit it.",
-      destination: carried.kind === "seed" ? "store" : "spoil",
+        carried.kind === "leaf"
+          ? "Carry your leaf scrap home. Press E to lay it down where you choose; lift it again to rearrange."
+          : carried.kind === "seed"
+            ? "Carry your seed to the communal store and press E."
+            : "Bring soil to the spoil bed. Press E to deposit it.",
+      destination:
+        carried.kind === "leaf"
+          ? "home"
+          : carried.kind === "seed"
+            ? "store"
+            : "spoil",
       progress: "Your mandibles are full.",
     };
   if (state.player.hunger < 35)
