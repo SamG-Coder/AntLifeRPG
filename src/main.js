@@ -711,6 +711,11 @@ renderer.setAnimationLoop(() => {
       colony: state.colony,
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
+      camera: {
+        position: camera.position.toArray(),
+        obstructionOffset: rig.obstructionOffset,
+        firstPerson: rig.first,
+      },
     });
     frameCount = 0;
     frameTime = 0;

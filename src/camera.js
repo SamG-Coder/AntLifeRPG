@@ -2,6 +2,7 @@ import * as T from "three/webgpu";
 import { height, caveDensity } from "./world.js";
 import { clipToFreeSpace } from "./contact.js";
 import { restoreFrame } from "./surface-motor.js";
+import { resolveFollowCamera } from "./follow-camera.js";
 const cameraDensity = (x, y, z) =>
   Math.max(caveDensity(x, y, z), height(x, z) - y);
 export class CameraRig {
@@ -13,6 +14,7 @@ export class CameraRig {
     this.drag = false;
     this.first = false;
     this.distance = 5.5;
+    this.obstructionOffset = 0;
     canvas.addEventListener("pointerdown", (e) => {
       this.drag = true;
       canvas.setPointerCapture(e.pointerId);
@@ -72,11 +74,17 @@ export class CameraRig {
       );
     } else {
       const d = this.distance;
-      desired = target
-        .clone()
-        .addScaledVector(forward, -d)
-        .addScaledVector(up, Math.sin(this.pitch) * d + 1.1);
-      desired = clipToFreeSpace(this.density, target, desired);
+      const resolved = resolveFollowCamera(
+        this.density,
+        target,
+        forward,
+        up,
+        d,
+        this.pitch,
+        this.obstructionOffset,
+      );
+      this.obstructionOffset = resolved.offset;
+      desired = resolved.position;
       const smoothed = this.camera.position
         .clone()
         .lerp(desired, 1 - Math.exp(-dt * 8));
