@@ -19,6 +19,7 @@ export function moveOnSurface(
   distance,
   turn = 0,
   solidDensity = density,
+  acceptPose = () => true,
 ) {
   let result = {
     position: frame.position.clone(),
@@ -38,6 +39,7 @@ export function moveOnSurface(
     result.bodyPitch = frame.bodyPitch ?? 0;
     result = fitBodyClearance(solidDensity, result) ?? result;
   }
+  if (!acceptPose(result)) return frame;
   if (!distance) return result;
   const steps = Math.max(1, Math.ceil(Math.abs(distance) / 0.04));
   for (let i = 0; i < steps; i++) {
@@ -60,6 +62,7 @@ export function moveOnSurface(
     next = fitBodyClearance(solidDensity, next) ?? next;
     if (penetration(next) > Math.max(0.025, penetration(result) + 1e-5)) break;
     if (!surfaceSupport(solidDensity, next).supported) break;
+    if (!acceptPose(next)) break;
     result = next;
   }
   return result;

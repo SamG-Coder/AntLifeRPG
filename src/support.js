@@ -1,4 +1,5 @@
 import { reachableFoot } from "./foot-contact.js";
+import { projectContact } from "./contact.js";
 
 // This is a geometric foothold feasibility check, not a force/adhesion model.
 export function surfaceSupport(density, frame) {
@@ -40,4 +41,33 @@ export function canStartRecovery(legs, index, moving) {
   if (legs.some((leg) => leg.recovery)) return false;
   // During walking, recover in the active swing tripod. At rest, lift one foot.
   return !moving || legs[index].swing;
+}
+
+export function stanceSupport(density, frame, legs) {
+  const right = frame.forward.clone().cross(frame.normal);
+  const up = frame.normal.clone().applyAxisAngle(right, frame.bodyPitch ?? 0);
+  const forward = frame.forward
+    .clone()
+    .applyAxisAngle(right, frame.bodyPitch ?? 0);
+  const root = frame.position
+    .clone()
+    .addScaledVector(frame.normal, frame.bodyLift ?? 0);
+  const planted = legs.filter((leg) => {
+    if (leg.swing || leg.recovery) return false;
+    const hip = root
+      .clone()
+      .addScaledVector(right, leg.side * 0.2)
+      .addScaledVector(up, 0.45)
+      .addScaledVector(forward, 0.28 - leg.index * 0.25);
+    if (hip.distanceTo(leg.foot) > 1.24) return false;
+    const contact = projectContact(density, leg.foot, { maxTravel: 0.07 });
+    return !!contact && contact.position.distanceTo(leg.foot) <= 0.06;
+  });
+  return {
+    count: planted.length,
+    supported:
+      planted.length >= 3 &&
+      planted.some((l) => l.side < 0) &&
+      planted.some((l) => l.side > 0),
+  };
 }

@@ -10,6 +10,7 @@ import {
   restoreFrame,
 } from "./surface-motor.js";
 import { CameraRig } from "./camera.js";
+import { stanceSupport } from "./support.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
@@ -576,6 +577,7 @@ renderer.setAnimationLoop(() => {
       }
     }
     const length = Math.hypot(forward, side);
+    player.gaitIntent = !!surfaceFrame && length > 0;
     if (surfaceFrame) {
       const speed = state.player.carrying !== null ? 0.65 : 1.1;
       surfaceFrame = moveOnSurface(
@@ -584,6 +586,8 @@ renderer.setAnimationLoop(() => {
         forward * dt * speed,
         -side * dt * 1.5,
         world.solidDensity,
+        (frame) =>
+          stanceSupport(world.solidDensity, frame, player.legs).supported,
       );
       state.player.x = surfaceFrame.position.x;
       state.player.z = surfaceFrame.position.z;
@@ -712,6 +716,9 @@ renderer.setAnimationLoop(() => {
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
       feet: {
+        planted: surfaceFrame
+          ? stanceSupport(world.solidDensity, surfaceFrame, player.legs).count
+          : null,
         recovering: player.recoveringFeet,
         unreachable: player.unreachableFeet,
         maxSegmentError: player.maxLegLengthError,

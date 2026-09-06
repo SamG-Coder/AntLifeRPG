@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Vector3 } from "three/webgpu";
-import { surfaceSupport, canStartRecovery } from "../src/support.js";
+import {
+  surfaceSupport,
+  canStartRecovery,
+  stanceSupport,
+} from "../src/support.js";
 import { attachSurface, moveOnSurface } from "../src/surface-motor.js";
 
 test("support finds reachable feet on both sides of floor and ceiling poses", () => {
@@ -15,6 +19,49 @@ test("support finds reachable feet on both sides of floor and ceiling poses", ()
     assert.ok(support.supported);
     assert.equal(support.contacts.length, 6);
   }
+});
+
+test("body movement waits for actual stance contacts, excluding airborne and recovering feet", () => {
+  const floor = (_x, y) => -y;
+  const frame = attachSurface(floor, new Vector3(), new Vector3(0, 0, -1));
+  const legs = surfaceSupport(floor, frame).contacts.map((c) => ({
+    ...c,
+    swing: false,
+    recovery: null,
+  }));
+  assert.equal(stanceSupport(floor, frame, legs).count, 6);
+  assert.equal(
+    stanceSupport((x, y, z) => 100 * floor(x, y, z), frame, legs).count,
+    6,
+  );
+  legs[0].swing = true;
+  legs[1].recovery = {};
+  legs[2].foot.y = 0.5;
+  legs[3].foot.y = 0.5;
+  assert.equal(stanceSupport(floor, frame, legs).supported, false);
+  const stopped = moveOnSurface(
+    floor,
+    frame,
+    0.04,
+    0,
+    floor,
+    (f) => stanceSupport(floor, f, legs).supported,
+  );
+  assert.ok(stopped.position.distanceTo(frame.position) < 1e-6);
+  for (const leg of legs) {
+    leg.swing = false;
+    leg.recovery = null;
+    leg.foot.y = 0.025;
+  }
+  const moved = moveOnSurface(
+    floor,
+    frame,
+    0.04,
+    0,
+    floor,
+    (f) => stanceSupport(floor, f, legs).supported,
+  );
+  assert.ok(moved.position.distanceTo(frame.position) > 0.039);
 });
 test("climbing rejects a body-clear pose supported on only one side", () => {
   const floor = (_x, y) => -y,

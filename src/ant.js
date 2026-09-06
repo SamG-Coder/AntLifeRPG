@@ -223,7 +223,10 @@ export class Ant {
               Math.cos(yaw - this.previousYaw),
             ),
           );
-    this.phase += (travel + turn * 0.3) * 5.6;
+    // Feet must finish stepping even while the support gate holds the body still.
+    const gaitTravel =
+      surface && this.gaitIntent ? Math.max(travel, dt * 0.5) : travel;
+    this.phase += (gaitTravel + turn * 0.3) * 5.6;
     this.root.updateMatrixWorld(true);
     this.cargo.visible = carrying;
     this.unreachableFeet = 0;
@@ -232,7 +235,7 @@ export class Ant {
     for (const leg of this.legs) {
       const phase = (this.phase + leg.group * Math.PI) % (Math.PI * 2);
       const swing = phase < Math.PI;
-      const moving = !leg.recovery && (travel > 0.0001 || turn > 0.002);
+      const moving = !leg.recovery && (gaitTravel > 0.0001 || turn > 0.002);
       const ideal = new T.Vector3(leg.side * 1.03, 0, -0.82 + leg.index * 0.78);
       if (surface) ideal.applyQuaternion(this.root.quaternion);
       else ideal.applyAxisAngle(new T.Vector3(0, 1, 0), yaw);
@@ -295,7 +298,7 @@ export class Ant {
           canStartRecovery(
             this.legs,
             this.legs.indexOf(leg),
-            travel > 0.0001 || turn > 0.002,
+            gaitTravel > 0.0001 || turn > 0.002,
           )
         ) {
           leg.recovery = {
