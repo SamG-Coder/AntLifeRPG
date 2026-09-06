@@ -1,4 +1,5 @@
 import { restingChambers } from "./colony-layout.js";
+import { restoreFrame } from "./surface-motor.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -185,6 +186,7 @@ export function validateState(state) {
     state.settings &&
     typeof state.settings === "object" &&
     Number.isFinite(state.player?.x) &&
+    (!state.player.attachment || !!restoreFrame(state.player.attachment)) &&
     Number.isFinite(state.player?.z) &&
     Number.isFinite(state.time)
   );

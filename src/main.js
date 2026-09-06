@@ -3,6 +3,12 @@ import * as T from "three/webgpu";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { loadAnt, Ant } from "./ant.js";
 import { buildWorld, height, walkable } from "./world.js";
+import {
+  attachSurface,
+  moveOnSurface,
+  serializeFrame,
+  restoreFrame,
+} from "./surface-motor.js";
 import { CameraRig } from "./camera.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
@@ -30,6 +36,8 @@ addEventListener("error", (event) => {
   $("status").textContent = `Runtime error: ${event.message}`;
 });
 const state = await load();
+let surfaceFrame = restoreFrame(state.player.attachment);
+let gripCruise = false;
 let route = [];
 let started = false,
   saveFailed = false,
@@ -97,6 +105,17 @@ for (const [x, y, z, color, intensity] of [
   scene.add(l);
 }
 const world = buildWorld(scene, state);
+if (surfaceFrame) {
+  surfaceFrame =
+    attachSurface(
+      world.contactDensity,
+      surfaceFrame.position,
+      surfaceFrame.forward,
+    ) ?? surfaceFrame;
+  state.player.x = surfaceFrame.position.x;
+  state.player.z = surfaceFrame.position.z;
+  state.player.attachment = serializeFrame(surfaceFrame);
+}
 await loadAnt();
 const player = new Ant(
   scene,
@@ -106,9 +125,11 @@ const player = new Ant(
   state.player.yaw,
 );
 const ants = state.npcs.map((n) => new Ant(scene, n.x, n.z, height));
-const rig = new CameraRig(camera, $("world"));
+player.contactDensity = world.solidDensity;
+const rig = new CameraRig(camera, $("world"), world.solidDensity);
 rig.yaw = state.player.yaw;
 rig.first = state.settings.firstPerson;
+if (surfaceFrame) rig.yaw = 0;
 const presentation = new Presentation(
   renderer,
   scene,
@@ -145,6 +166,11 @@ function toast(message) {
   toastUntil = elapsed + 5;
 }
 function nearby() {
+  if (surfaceFrame)
+    return {
+      kind: "grip",
+      text: `GRIP · W/S advance · A/D turn · V ${gripCruise ? "stop" : "steady advance"} · C release on ground`,
+    };
   const p = state.player;
   if (p.carrying !== null)
     return {
@@ -227,6 +253,7 @@ function interact() {
   syncItems();
 }
 function greetWorker(npc) {
+  if (surfaceFrame) return;
   if (!npc) {
     toast("Move closer to a worker to exchange scents.");
     return;
@@ -240,6 +267,10 @@ function greetWorker(npc) {
   );
 }
 function dig() {
+  if (surfaceFrame) {
+    toast("Release your grip on the ground before excavating.");
+    return;
+  }
   if (state.player.carrying !== null) {
     toast("Set down your load before excavating.");
     return;
@@ -273,6 +304,10 @@ function dig() {
   toast("The soil breaks free. Lift the clump and carry it away.");
 }
 function rest() {
+  if (surfaceFrame) {
+    toast("Release your grip on the ground before resting.");
+    return;
+  }
   if (distance(state.player, sites.home) > 3) {
     toast("Your leaf bed is back in your home chamber.");
     return;
@@ -314,6 +349,11 @@ for (const [key, site] of Object.entries(sites)) {
   button.textContent = `Follow scent · ${site.name}`;
   button.className = "scent-choice";
   button.onclick = () => {
+    if (surfaceFrame) {
+      toast("Release your grip on the ground before following a scent.");
+      $("journal").close();
+      return;
+    }
     route = scentRoute(state.player, key);
     if (key === "surface") {
       const seed = state.items
@@ -410,6 +450,46 @@ addEventListener("keydown", (e) => {
     state.settings.firstPerson = rig.first;
   }
   if (e.code === "KeyE") interact();
+  if (e.code === "KeyC") {
+    gripCruise = false;
+    if (surfaceFrame) {
+      if (
+        surfaceFrame.normal.y < 0.8 ||
+        Math.abs(
+          surfaceFrame.position.y - height(state.player.x, state.player.z),
+        ) > 0.35
+      ) {
+        toast("Keep your grip. Return to the ground before releasing.");
+        return;
+      }
+      state.player.yaw = Math.atan2(
+        -surfaceFrame.forward.x,
+        -surfaceFrame.forward.z,
+      );
+      rig.yaw = state.player.yaw;
+      surfaceFrame = null;
+      delete state.player.attachment;
+      toast("Back on the ground.");
+    } else {
+      surfaceFrame = attachSurface(
+        world.contactDensity,
+        new T.Vector3(
+          state.player.x,
+          height(state.player.x, state.player.z),
+          state.player.z,
+        ),
+        new T.Vector3(-Math.sin(rig.yaw), 0, -Math.cos(rig.yaw)),
+      );
+      if (surfaceFrame) {
+        state.player.attachment = serializeFrame(surfaceFrame);
+        rig.yaw = 0;
+        route = [];
+        toast("Grip engaged. W/S advance along the surface; A/D turn.");
+      } else toast("No stable surface contact here.");
+    }
+  }
+  if (e.code === "KeyV" && surfaceFrame) gripCruise = !gripCruise;
+  if (e.code === "KeyW" || e.code === "KeyS") gripCruise = false;
   if (e.code === "KeyG")
     greetWorker(
       state.npcs
@@ -459,7 +539,7 @@ renderer.setAnimationLoop(() => {
     tick(state, dt);
     for (const n of state.npcs) {
       const d = distance(n, state.player);
-      if (d < 1.15 && d > 0.001) {
+      if (!surfaceFrame && d < 1.15 && d > 0.001) {
         const force = Math.min(0.06, (1.15 - d) * dt * 4),
           x = n.x + ((n.x - state.player.x) / d) * force,
           z = n.z + ((n.z - state.player.z) / d) * force;
@@ -479,6 +559,7 @@ renderer.setAnimationLoop(() => {
     if (keys.has("ArrowDown")) rig.pitch = Math.min(0.8, rig.pitch + dt);
     let forward = Number(keys.has("KeyW")) - Number(keys.has("KeyS")),
       side = Number(keys.has("KeyD")) - Number(keys.has("KeyA"));
+    if (surfaceFrame && gripCruise && !forward) forward = 1;
     if (forward || side) route = [];
     if (route.length) {
       const waypoint = route[0];
@@ -495,7 +576,21 @@ renderer.setAnimationLoop(() => {
       }
     }
     const length = Math.hypot(forward, side);
-    if (length) {
+    if (surfaceFrame) {
+      const speed = state.player.carrying !== null ? 0.65 : 1.1;
+      surfaceFrame = moveOnSurface(
+        world.contactDensity,
+        surfaceFrame,
+        forward * dt * speed,
+        -side * dt * 1.5,
+        world.solidDensity,
+      );
+      state.player.x = surfaceFrame.position.x;
+      state.player.z = surfaceFrame.position.z;
+      state.player.attachment = serializeFrame(surfaceFrame);
+      if (length)
+        state.player.energy = Math.max(0, state.player.energy - dt * 0.3);
+    } else if (length) {
       forward /= length;
       side /= length;
       const running = keys.has("ShiftLeft") && state.player.energy > 5;
@@ -537,6 +632,9 @@ renderer.setAnimationLoop(() => {
     rig.first ? rig.yaw : state.player.yaw,
     dt,
     state.player.carrying !== null,
+    false,
+    false,
+    surfaceFrame,
   );
   player.body.visible = !rig.first;
   senses.update(rig.first, elapsed, state.player.carrying !== null);
@@ -612,6 +710,7 @@ renderer.setAnimationLoop(() => {
       carrying: state.player.carrying,
       colony: state.colony,
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
+      attachment: state.player.attachment ?? null,
     });
     frameCount = 0;
     frameTime = 0;

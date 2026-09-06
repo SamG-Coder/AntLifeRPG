@@ -2,6 +2,7 @@ import * as T from "three/webgpu";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 import { setSegment, solveKnee } from "./math.js";
+import { projectContact } from "./contact.js";
 import { mx_noise_float, positionLocal, vec3, bumpMap } from "three/tsl";
 let bodyTemplate;
 const shell = new T.MeshStandardMaterial({
@@ -141,8 +142,19 @@ export class Ant {
     this.cargo.visible = false;
     this.root.add(this.cargo);
   }
-  update(x, z, yaw, dt, carrying = false, greeting = false, resting = false) {
-    const groundTravel = Math.hypot(x - this.previous.x, z - this.previous.z);
+  update(
+    x,
+    z,
+    yaw,
+    dt,
+    carrying = false,
+    greeting = false,
+    resting = false,
+    surface = null,
+  ) {
+    const groundTravel = surface
+      ? surface.position.distanceTo(this.previous)
+      : Math.hypot(x - this.previous.x, z - this.previous.z);
     this.restBlend = T.MathUtils.damp(
       this.restBlend ?? 0,
       resting && !greeting && !carrying && groundTravel < 0.001 ? 1 : 0,
@@ -163,14 +175,19 @@ export class Ant {
         this.restBlend * 0.22;
     }
     this.root.position.set(x, this.height(x, z) - this.restBlend * 0.1, z);
+    if (surface) this.root.position.copy(surface.position);
     this.yaw = yaw;
     const epsilon = 0.12;
-    const normal = new T.Vector3(
-      this.height(x - epsilon, z) - this.height(x + epsilon, z),
-      epsilon * 2,
-      this.height(x, z - epsilon) - this.height(x, z + epsilon),
-    ).normalize();
-    const forward = new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
+    const normal = surface
+      ? surface.normal.clone()
+      : new T.Vector3(
+          this.height(x - epsilon, z) - this.height(x + epsilon, z),
+          epsilon * 2,
+          this.height(x, z - epsilon) - this.height(x, z + epsilon),
+        ).normalize();
+    const forward = surface
+      ? surface.forward.clone()
+      : new T.Vector3(-Math.sin(yaw), 0, -Math.cos(yaw));
     forward.addScaledVector(normal, -forward.dot(normal)).normalize();
     const right = forward.clone().cross(normal).normalize();
     const basis = new T.Matrix4().makeBasis(
@@ -182,14 +199,21 @@ export class Ant {
       new T.Quaternion().setFromRotationMatrix(basis),
       Math.min(1, dt * 12),
     );
+    if (surface && !this.wasAttached)
+      this.root.quaternion.setFromRotationMatrix(basis);
     // Posture changes must not advance walking phases or lift planted feet.
     const travel = groundTravel;
-    const turn = Math.abs(
-      Math.atan2(
-        Math.sin(yaw - this.previousYaw),
-        Math.cos(yaw - this.previousYaw),
-      ),
-    );
+    const turn =
+      surface && this.previousSurfaceForward
+        ? Math.acos(
+            T.MathUtils.clamp(forward.dot(this.previousSurfaceForward), -1, 1),
+          )
+        : Math.abs(
+            Math.atan2(
+              Math.sin(yaw - this.previousYaw),
+              Math.cos(yaw - this.previousYaw),
+            ),
+          );
     this.phase += (travel + turn * 0.3) * 5.6;
     this.root.updateMatrixWorld(true);
     this.cargo.visible = carrying;
@@ -197,24 +221,38 @@ export class Ant {
       const phase = (this.phase + leg.group * Math.PI) % (Math.PI * 2);
       const swing = phase < Math.PI;
       const moving = travel > 0.0001 || turn > 0.002;
-      const ideal = new T.Vector3(leg.side * 1.03, 0, -0.82 + leg.index * 0.78)
-        .applyAxisAngle(new T.Vector3(0, 1, 0), yaw)
-        .add(this.root.position);
-      ideal.y = this.height(ideal.x, ideal.z) + 0.025;
+      const ideal = new T.Vector3(leg.side * 1.03, 0, -0.82 + leg.index * 0.78);
+      if (surface) ideal.applyQuaternion(this.root.quaternion);
+      else ideal.applyAxisAngle(new T.Vector3(0, 1, 0), yaw);
+      ideal.add(this.root.position);
+      const ground = (point) => {
+        if (surface && this.contactDensity) {
+          const contact = projectContact(this.contactDensity, point, {
+            maxTravel: 1.5,
+          });
+          if (contact)
+            point.copy(contact.position).addScaledVector(contact.normal, 0.025);
+        } else point.y = this.height(point.x, point.z) + 0.025;
+      };
+      ground(ideal);
+      if (surface && !this.wasAttached) leg.foot.copy(ideal);
       if (moving && swing && !leg.swing) {
         leg.start.copy(leg.foot);
-        leg.target
-          .copy(ideal)
-          .add(new T.Vector3(-Math.sin(yaw) * 0.32, 0, -Math.cos(yaw) * 0.32));
-        leg.target.y = this.height(leg.target.x, leg.target.z) + 0.025;
+        leg.target.copy(ideal).addScaledVector(forward, 0.32);
+        ground(leg.target);
       }
       if (moving && swing) {
         const t = phase / Math.PI;
         leg.foot.lerpVectors(leg.start, leg.target, t * t * (3 - 2 * t));
-        leg.foot.y += Math.sin(t * Math.PI) * 0.17;
+        leg.foot.addScaledVector(normal, Math.sin(t * Math.PI) * 0.17);
       }
       if (moving && !swing && leg.swing) leg.foot.copy(leg.target);
-      if (!moving)
+      if (!moving && surface) {
+        const planted = leg.foot.clone();
+        ground(planted);
+        leg.foot.lerp(planted, Math.min(1, dt * 15));
+      }
+      if (!moving && !surface)
         leg.foot.y = T.MathUtils.lerp(
           leg.foot.y,
           this.height(leg.foot.x, leg.foot.z) + 0.025,
@@ -223,12 +261,12 @@ export class Ant {
       if (leg.foot.distanceTo(ideal) > 1.4) leg.foot.copy(ideal);
       leg.swing = moving && swing;
       const hip = leg.hip.clone().applyMatrix4(this.root.matrixWorld);
-      const ankle = leg.foot.clone().add(new T.Vector3(0, 0.065, 0));
-      const bend = new T.Vector3(
-        leg.side * Math.cos(yaw),
-        0.9,
-        -leg.side * Math.sin(yaw),
-      ).normalize();
+      const ankle = leg.foot.clone().addScaledVector(normal, 0.065);
+      const bend = right
+        .clone()
+        .multiplyScalar(leg.side)
+        .addScaledVector(normal, 0.9)
+        .normalize();
       const knee = solveKnee(hip, ankle, bend, 0.66);
       setSegment(leg.segments[0], hip, knee);
       setSegment(leg.segments[1], knee, ankle);
@@ -247,6 +285,8 @@ export class Ant {
         : Math.sin(this.animationTime * 1.8) * 0.006 * quiet;
     this.previous.copy(this.root.position);
     this.previousYaw = yaw;
+    this.wasAttached = !!surface;
+    this.previousSurfaceForward = surface ? forward.clone() : null;
     this.limbBatch.mesh.instanceMatrix.needsUpdate = true;
   }
 }

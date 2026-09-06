@@ -61,7 +61,13 @@ export function field(x, z) {
 export function walkable(x, z) {
   return field(x, z) < -0.45;
 }
-export function caveDensity(x, y, z) {
+export function climbDensity(x, y, z) {
+  const wall = caveDensity(x, y, z, false),
+    floor = height(x, z) - y;
+  const blend = Math.max(2 - Math.abs(wall - floor), 0);
+  return Math.max(wall, floor) + (blend * blend) / 8;
+}
+export function caveDensity(x, y, z, detail = true) {
   const f = field(x, z);
   const noise =
     Math.sin(x * 3.4 + y * 2.7) * Math.sin(z * 3.1 - y * 2.1) * 0.13 +
@@ -71,7 +77,7 @@ export function caveDensity(x, y, z) {
   return (
     f +
     Math.pow(Math.max(0, y - height(x, z)) / 3.4, 4) * 3 * (1 - roof) +
-    noise
+    (detail ? noise : 0)
   );
 }
 function soilTexture() {
@@ -535,7 +541,7 @@ export function buildWorld(scene, state) {
         m.userData.cell = id;
         digCells.set(id, m);
       }
-  let excavationMesh;
+  let excavationMesh, excavationField;
   function rebuildExcavation() {
     const holes = state.removed.map((id) => {
       const [ix, iy, iz] = id.split(":").map(Number);
@@ -558,6 +564,7 @@ export function buildWorld(scene, state) {
         );
       return value;
     };
+    excavationField = density;
     const geometry = implicitMesh(
       density,
       [
@@ -599,5 +606,21 @@ export function buildWorld(scene, state) {
     }),
   );
   scene.add(dust);
-  return { digCells, soil, seedMat, seedGeo, trail, dust, rebuildExcavation };
+  return {
+    digCells,
+    soil,
+    seedMat,
+    seedGeo,
+    trail,
+    dust,
+    rebuildExcavation,
+    contactDensity: (x, y, z) =>
+      Math.max(climbDensity(x, y, z), excavationField(x, y, z)),
+    solidDensity: (x, y, z) =>
+      Math.max(
+        caveDensity(x, y, z),
+        height(x, z) - y,
+        excavationField(x, y, z),
+      ),
+  };
 }
