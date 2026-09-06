@@ -6,6 +6,9 @@ export function onDuty(worker, minutes) {
 }
 
 export function updateNeeds(worker, dt) {
+  worker.cleanliness ??= 78;
+  if (worker.cargo || ["excavate", "loosen"].includes(worker.task))
+    worker.cleanliness = Math.max(0, worker.cleanliness - dt * 0.12);
   worker.hunger ??= 80 + (worker.id % 5) * 3;
   worker.hunger = Math.max(0, worker.hunger - dt * 0.018);
   const settled = worker.task === "off-duty" && !worker.path?.length;
@@ -28,6 +31,7 @@ export function breakReason(worker, minutes) {
 }
 
 export function activityLabel(worker) {
+  if (worker.groomRemaining > 0) return "Grooming antennae";
   if (worker.greetingRemaining > 0) return "Exchanging scents with you";
   if (worker.task === "off-duty") {
     if (worker.path?.length)

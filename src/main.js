@@ -11,6 +11,7 @@ import {
 } from "./surface-motor.js";
 import { CameraRig } from "./camera.js";
 import { stanceSupport } from "./support.js";
+import { startGrooming } from "./grooming.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
@@ -173,6 +174,11 @@ function nearby() {
       text: `GRIP · W/S advance · A/D turn · V ${gripCruise ? "stop" : "steady advance"} · C release on ground`,
     };
   const p = state.player;
+  if (p.groomRemaining > 0)
+    return {
+      kind: "groom",
+      text: `Grooming antennae · ${Math.ceil(p.groomRemaining)}s · WASD to stop`,
+    };
   if (p.carrying !== null)
     return {
       kind: "drop",
@@ -300,6 +306,7 @@ function dig() {
   world.digCells.delete(id);
   world.rebuildExcavation();
   state.player.energy = Math.max(0, state.player.energy - 2);
+  state.player.cleanliness = Math.max(0, (state.player.cleanliness ?? 78) - 7);
   audio.click(true);
   syncItems();
   toast("The soil breaks free. Lift the clump and carry it away.");
@@ -328,6 +335,10 @@ function journal() {
   const reserve = document.createElement("p");
   reserve.textContent = `Colony food: ${state.colony.food} portions · ${state.npcs.length} familiar workers`;
   roster.append(reserve);
+  const selfCare = document.createElement("p");
+  const cleanliness = state.player.cleanliness ?? 78;
+  selfCare.textContent = `Your antennae: ${cleanliness >= 90 ? "clean" : cleanliness >= 60 ? "dusty" : "coated in soil"} · ${state.player.groomingBouts ?? 0} grooming breaks completed. Press L on the ground to groom.`;
+  roster.append(selfCare);
   for (const n of state.npcs) {
     const row = document.createElement("p");
     row.textContent = `${n.name} · ${n.role} · ${activityLabel(n)} · energy ${Math.round(n.energy)} · nourishment ${Math.round(n.hunger ?? 85)}`;
@@ -446,6 +457,26 @@ addEventListener("keydown", (e) => {
     return;
   }
   if ($("journal").open) return;
+  if (
+    [
+      "KeyW",
+      "KeyA",
+      "KeyS",
+      "KeyD",
+      "KeyE",
+      "KeyG",
+      "KeyQ",
+      "KeyR",
+      "KeyC",
+    ].includes(e.code)
+  )
+    state.player.groomRemaining = 0;
+  if (e.code === "KeyL") {
+    if (startGrooming(state.player)) {
+      route = [];
+      toast("You settle down to clean your antennae.");
+    } else toast("Stand on the ground with empty mandibles to groom.");
+  }
   if (e.code === "KeyF") {
     rig.first = !rig.first;
     state.settings.firstPerson = rig.first;
@@ -537,7 +568,10 @@ renderer.setAnimationLoop(() => {
   previous = now;
   elapsed += dt;
   if (started && !$("journal").open) {
+    const groomingBouts = state.player.groomingBouts ?? 0;
     tick(state, dt);
+    if ((state.player.groomingBouts ?? 0) > groomingBouts)
+      toast("Antennae clean. Ready for the next part of your day.");
     for (const n of state.npcs) {
       const d = distance(n, state.player);
       if (!surfaceFrame && d < 1.15 && d > 0.001) {
@@ -577,6 +611,7 @@ renderer.setAnimationLoop(() => {
       }
     }
     const length = Math.hypot(forward, side);
+    if (length) state.player.groomRemaining = 0;
     player.gaitIntent = !!surfaceFrame && length > 0;
     if (surfaceFrame) {
       const speed = state.player.carrying !== null ? 0.65 : 1.1;
@@ -639,6 +674,7 @@ renderer.setAnimationLoop(() => {
     false,
     false,
     surfaceFrame,
+    state.player.groomRemaining > 0,
   );
   player.body.visible = !rig.first;
   senses.update(rig.first, elapsed, state.player.carrying !== null);
@@ -657,7 +693,17 @@ renderer.setAnimationLoop(() => {
       n.task === "off-duty" &&
       !n.path?.length &&
       ["sleep", "fatigue"].includes(n.breakReason);
-    a.update(n.x, n.z, yaw, dt, !!n.cargo, n.greetingRemaining > 0, resting);
+    a.update(
+      n.x,
+      n.z,
+      yaw,
+      dt,
+      !!n.cargo,
+      n.greetingRemaining > 0,
+      resting,
+      null,
+      n.groomRemaining > 0,
+    );
   }
   rig.update(state.player, dt);
   world.dust.rotation.y = Math.sin(elapsed * 0.015) * 0.02;
@@ -715,6 +761,12 @@ renderer.setAnimationLoop(() => {
       colony: state.colony,
       restingWorkers: ants.filter((a) => a.restBlend > 0.8).length,
       attachment: state.player.attachment ?? null,
+      grooming: {
+        remaining: state.player.groomRemaining ?? 0,
+        cleanliness: state.player.cleanliness ?? 78,
+        bouts: state.player.groomingBouts ?? 0,
+        workers: state.npcs.filter((n) => n.groomRemaining > 0).length,
+      },
       feet: {
         planted: surfaceFrame
           ? stanceSupport(world.solidDensity, surfaceFrame, player.legs).count

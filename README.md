@@ -21,6 +21,7 @@ The current prototype is playable at **https://samg-coder.github.io/AntLifeRPG/*
 - C engages nest-surface grip. While gripping, W/S advance/reverse, A/D turn, and V toggles steady advance. Return to level ground and press C to release before other interactions.
 - H opens field notes and scent routes. Following a scent moves physically through the connected tunnels; WASD cancels guidance.
 - R rests at the home leaf bed. Browser IndexedDB stores the colony every 20 seconds and when the page becomes hidden.
+- L starts an eight-second antenna grooming break on the ground with empty mandibles. Movement and interactions interrupt it. Dusty work reduces cleanliness; idle workers groom when other needs and work permit.
 
 There are 24 named workers, a home, food store, excavation face, spoil bed and surface garden. Soil removal changes actual mesh geometry and produces persistent movable items. Workers now share the same item and excavation state as the player. Initial relationships record greetings and shared work.
 

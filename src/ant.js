@@ -153,6 +153,7 @@ export class Ant {
     greeting = false,
     resting = false,
     surface = null,
+    grooming = false,
   ) {
     const groundTravel = surface
       ? surface.position.distanceTo(this.previous)
@@ -164,6 +165,12 @@ export class Ant {
       dt,
     );
     const quiet = 1 - this.restBlend * 0.85;
+    this.groomBlend = T.MathUtils.damp(
+      this.groomBlend ?? 0,
+      grooming && !greeting && !carrying && !surface ? 1 : 0,
+      8,
+      dt,
+    );
     this.antennaPhase =
       (this.antennaPhase ?? this.animationTime) +
       dt * (greeting ? 5 : 1.8) * quiet;
@@ -175,6 +182,8 @@ export class Ant {
       this.feelers[i].rotation.x =
         Math.sin(t * 0.7 + i) * (greeting ? 0.12 : 0.04) * quiet -
         this.restBlend * 0.22;
+      this.feelers[i].rotation.x +=
+        this.groomBlend * (0.45 + Math.sin(this.animationTime * 5 + i) * 0.12);
     }
     this.root.position.set(x, this.height(x, z) - this.restBlend * 0.1, z);
     if (surface)
@@ -277,6 +286,14 @@ export class Ant {
         );
       leg.swing = moving && swing;
       const hip = leg.hip.clone().applyMatrix4(this.root.matrixWorld);
+      if (leg.index === 0 && this.groomBlend > 0.001) {
+        const paw = new T.Vector3(
+          leg.side * 0.22,
+          0.64 + Math.sin(this.animationTime * 5 + leg.side) * 0.08,
+          -0.93,
+        ).applyMatrix4(this.root.matrixWorld);
+        leg.foot.lerp(paw, this.groomBlend);
+      }
       if (
         !leg.recovery &&
         (hip.distanceTo(leg.foot) > 1.24 || leg.foot.distanceTo(ideal) > 1.4)

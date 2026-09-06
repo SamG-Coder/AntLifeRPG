@@ -1,5 +1,6 @@
 import { restingChambers } from "./colony-layout.js";
 import { restoreFrame } from "./surface-motor.js";
+import { advanceGrooming, validGrooming } from "./grooming.js";
 export const sites = {
   ...restingChambers,
   home: { x: 0, z: 0, name: "Your chamber" },
@@ -86,6 +87,7 @@ export function tick(state, dt) {
   }
   const p = state.player;
   p.hunger = Math.max(0, p.hunger - dt * 0.024);
+  advanceGrooming(p, dt);
   p.energy = Math.min(100, Math.max(0, p.energy + dt * 0.12));
   updateColony(state, dt, { sites, distance, excavate });
 }
@@ -160,6 +162,7 @@ export function validateState(state) {
     state.npcs.every(
       (n) =>
         n &&
+        validGrooming(n) &&
         Number.isInteger(n.id) &&
         typeof n.name === "string" &&
         [n.x, n.z, n.energy, n.trust].every(Number.isFinite) &&
@@ -186,6 +189,7 @@ export function validateState(state) {
     state.settings &&
     typeof state.settings === "object" &&
     Number.isFinite(state.player?.x) &&
+    validGrooming(state.player) &&
     (!state.player.attachment || !!restoreFrame(state.player.attachment)) &&
     Number.isFinite(state.player?.z) &&
     Number.isFinite(state.time)

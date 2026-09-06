@@ -1,6 +1,7 @@
 import { scentRoute } from "./navigation.js";
 import { updateNeeds, breakReason, onDuty } from "./daily-life.js";
 import { restingPlace } from "./colony-layout.js";
+import { startGrooming, advanceGrooming } from "./grooming.js";
 
 export function soilCellPosition(id) {
   const [ix, iy, iz] = id.split(":").map(Number);
@@ -52,11 +53,13 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
     }
     updateNeeds(n, dt);
     if (n.greetingRemaining > 0) {
+      n.groomRemaining = 0;
       n.greetingRemaining = Math.max(0, n.greetingRemaining - dt);
       if (distance(n, state.player) > 3) n.greetingRemaining = 0;
       else continue;
     }
     n.breakReason = breakReason(n, state.time);
+    if (n.breakReason || n.greetingRemaining > 0) n.groomRemaining = 0;
     // An empty store must not strand every hungry forager in a food deadlock.
     if (
       n.breakReason === "meal" &&
@@ -153,8 +156,12 @@ export function updateColony(state, dt, { sites, distance, excavate }) {
           i.id !== state.player.carrying,
       ).length;
       if (n.role === "forager" ? seeds > 3 : looseLoad || hasDigWork(state)) {
+        n.groomRemaining = 0;
         n.task = "commute";
         go(n, n.role === "forager" ? "surface" : "dig");
+      } else {
+        if (n.cleanliness < 85 && !(n.groomRemaining > 0)) startGrooming(n);
+        advanceGrooming(n, dt);
       }
       continue;
     }
