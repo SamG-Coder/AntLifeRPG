@@ -92,7 +92,7 @@ export function currentDuty(state) {
     return {
       id: "forage",
       title: "Food for the next shift",
-      text: "Follow the surface scent, lift a seed with E, and bring it to the store.",
+      text: "Follow the duty scent to an available seed, lift it with E, and bring it to the store.",
       destination: "surface",
       progress: `Nursery cleared · ${seeds.length} ${seeds.length === 1 ? "seed" : "seeds"} available · ${state.player.seeds} delivered by you`,
     };

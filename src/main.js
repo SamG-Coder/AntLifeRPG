@@ -19,6 +19,7 @@ import { prepareLoadDrop, loadDropMessage } from "./load-interaction.js";
 import { AudioSystem } from "./audio.js";
 import { load, save, loadNotice } from "./save.js";
 import { scentRoute } from "./navigation.js";
+import { itemScentRoute, collectableItem } from "./item-route.js";
 import { AntSenses } from "./senses.js";
 import { Presentation } from "./presentation.js";
 import { updateDaylight } from "./daylight.js";
@@ -45,6 +46,7 @@ const state = await load();
 let surfaceFrame = restoreFrame(state.player.attachment);
 let gripCruise = false;
 let route = [];
+let routeLoad = null;
 let started = false,
   saveFailed = false,
   elapsed = 0,
@@ -233,8 +235,10 @@ function interact() {
   if (!n) return;
   audio.click();
   if (n.kind === "drop") {
+    route = [];
     if (deposit(state, n.position)) toast(loadDropMessage(n.item));
   } else if (n.kind === "item") {
+    route = [];
     pickup(state, n.item);
     toast(
       n.item.kind === "soil"
@@ -367,28 +371,31 @@ function journal() {
   keys.clear();
 }
 $("close").onclick = () => $("journal").close();
-function followScent(key) {
+function followScent(key, kind = null) {
   const site = sites[key];
   if (surfaceFrame) {
     toast("Release your grip on the ground before following a scent.");
     $("journal").close();
     return;
   }
-  route = scentRoute(state.player, key);
-  if (key === "surface") {
-    const seed = state.items
-      .filter((i) => i.kind === "seed" && !i.deposited && i.owner == null)
-      .sort(
-        (a, b) => distance(a, sites.surface) - distance(b, sites.surface),
-      )[0];
-    if (seed) route.push({ x: seed.x, z: seed.z });
-  }
+  routeLoad = kind ? itemScentRoute(state, kind, walkable) : null;
+  route = kind ? (routeLoad?.route ?? []) : scentRoute(state.player, key);
   $("journal").close();
   toast(
-    `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
+    kind
+      ? routeLoad
+        ? `You follow the scent of an available ${kind === "seed" ? "seed" : "soil load"}. WASD to leave the trail.`
+        : "No available load has a clear ground route. The crew may be carrying the remaining parcels."
+      : `You pick up the scent of ${site.name.toLowerCase()}. WASD to leave the trail.`,
   );
 }
-$("duty-route").onclick = () => followScent(currentDuty(state).destination);
+$("duty-route").onclick = () => {
+  const duty = currentDuty(state);
+  followScent(
+    duty.destination,
+    duty.id === "forage" ? "seed" : duty.id === "clear" ? "soil" : null,
+  );
+};
 for (const [key, site] of Object.entries(sites)) {
   const button = document.createElement("button");
   button.textContent = `Follow scent · ${site.name}`;
@@ -607,6 +614,22 @@ renderer.setAnimationLoop(() => {
       side = Number(keys.has("KeyD")) - Number(keys.has("KeyA"));
     if (surfaceFrame && gripCruise && !forward) forward = 1;
     if (forward || side) route = [];
+    if (!route.length) routeLoad = null;
+    if (routeLoad) {
+      const item = state.items.find((i) => i.id === routeLoad.itemId);
+      if (
+        !collectableItem(state, item, routeLoad.kind) ||
+        distance(item, route.at(-1)) > 0.1
+      ) {
+        routeLoad = itemScentRoute(state, routeLoad.kind, walkable);
+        route = routeLoad?.route ?? [];
+        toast(
+          routeLoad
+            ? "That load moved. You pick up another available scent."
+            : "The remaining loads are no longer available. You leave the trail.",
+        );
+      }
+    }
     if (route.length) {
       const waypoint = route[0];
       if (distance(state.player, waypoint) < 0.25) route.shift();
