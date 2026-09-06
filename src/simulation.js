@@ -51,8 +51,14 @@ export function createState() {
       id: i,
       name,
       role: i % 3 === 0 ? "excavator" : i % 3 === 1 ? "forager" : "carrier",
-      x: Math.cos(i * 2.39996) * (1.8 + (i % 3) * 0.5),
-      z: (i < 12 ? 0 : -14) + Math.sin(i * 2.39996) * (1.8 + (i % 3) * 0.5),
+      x:
+        i < 12
+          ? ((i % 2) * 2 - 1) * 1.05
+          : Math.cos(((i - 12) * Math.PI) / 6) * 3.5,
+      z:
+        i < 12
+          ? -4 - Math.floor(i / 2) * 1.7
+          : -14 + Math.sin(((i - 12) * Math.PI) / 6) * 3.5,
       target: i % 4,
       energy: 100,
       trust: 0,
